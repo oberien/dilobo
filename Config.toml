@@ -1,0 +1,14 @@
+[bot]
+# bot token
+token = "foobar"
+
+[[server]]
+# To identify the server you can specify server_name or server_id.
+# If both are given, they'll be checked against each other.
+server_name = "My Awesome Server"
+# server_id = 1337
+
+# To identify the channel to log into you can specify log_channel_name or
+# log_channel_id. If both are given, they'll be checked against each other.
+log_channel_name = "log"
+# log_channel_id = 42
