@@ -6,7 +6,9 @@ use discord::model::{
     Message,
     MessageType,
     MessageDelete,
+    Role,
 };
+use discord::model::permissions::{self, Permissions};
 
 pub trait MergeIntoMap {
     fn merge_into_map(self, map: &mut HashMap<String, String>);
@@ -91,5 +93,53 @@ impl MergeIntoMap for MessageDelete {
         let MessageDelete { channel_id, message_id } = self;
         map.insert("channel_id".to_string(), channel_id.to_string());
         map.insert("message_id".to_string(), message_id.to_string());
+    }
+}
+
+impl MergeIntoMap for Role {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        let Role { id, name, color, hoist, managed, position,
+                   mentionable, permissions: perms } = self;
+        map.insert("id".to_string(), id.to_string());
+        map.insert("name".to_string(), name.to_string());
+        map.insert("color".to_string(), format!("{:x}", color));
+        map.insert("hoist".to_string(), hoist.to_string());
+        map.insert("managed".to_string(), managed.to_string());
+        map.insert("position".to_string(), position.to_string());
+        map.insert("mentionable".to_string(), mentionable.to_string());
+        map.insert("perms".to_string(), format!("{:?}", perms));
+        perms.merge_into_map_prefix(map, "perm_");
+    }
+}
+
+impl MergeIntoMap for Permissions {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        map.insert("add_reactions".to_string(), self.contains(permissions::ADD_REACTIONS).to_string());
+        map.insert("administrator".to_string(), self.contains(permissions::ADMINISTRATOR).to_string());
+        map.insert("attach_files".to_string(), self.contains(permissions::ATTACH_FILES).to_string());
+        map.insert("ban_members".to_string(), self.contains(permissions::BAN_MEMBERS).to_string());
+        map.insert("change_nicknames".to_string(), self.contains(permissions::CHANGE_NICKNAMES).to_string());
+        map.insert("create_invite".to_string(), self.contains(permissions::CREATE_INVITE).to_string());
+        map.insert("embed_links".to_string(), self.contains(permissions::EMBED_LINKS).to_string());
+        map.insert("external_emojis".to_string(), self.contains(permissions::EXTERNAL_EMOJIS).to_string());
+        map.insert("kick_members".to_string(), self.contains(permissions::KICK_MEMBERS).to_string());
+        map.insert("manage_channels".to_string(), self.contains(permissions::MANAGE_CHANNELS).to_string());
+        map.insert("manage_emojis".to_string(), self.contains(permissions::MANAGE_EMOJIS).to_string());
+        map.insert("manage_messages".to_string(), self.contains(permissions::MANAGE_MESSAGES).to_string());
+        map.insert("manage_nicknames".to_string(), self.contains(permissions::MANAGE_NICKNAMES).to_string());
+        map.insert("manage_roles".to_string(), self.contains(permissions::MANAGE_ROLES).to_string());
+        map.insert("manage_server".to_string(), self.contains(permissions::MANAGE_SERVER).to_string());
+        map.insert("manage_webhooks".to_string(), self.contains(permissions::MANAGE_WEBHOOKS).to_string());
+        map.insert("mention_everyone".to_string(), self.contains(permissions::MENTION_EVERYONE).to_string());
+        map.insert("read_history".to_string(), self.contains(permissions::READ_HISTORY).to_string());
+        map.insert("read_messages".to_string(), self.contains(permissions::READ_MESSAGES).to_string());
+        map.insert("send_messages".to_string(), self.contains(permissions::SEND_MESSAGES).to_string());
+        map.insert("send_tts_messages".to_string(), self.contains(permissions::SEND_TTS_MESSAGES).to_string());
+        map.insert("voice_connect".to_string(), self.contains(permissions::VOICE_CONNECT).to_string());
+        map.insert("voice_deafen_members".to_string(), self.contains(permissions::VOICE_DEAFEN_MEMBERS).to_string());
+        map.insert("voice_move_members".to_string(), self.contains(permissions::VOICE_MOVE_MEMBERS).to_string());
+        map.insert("voice_mute_members".to_string(), self.contains(permissions::VOICE_MUTE_MEMBERS).to_string());
+        map.insert("voice_speak".to_string(), self.contains(permissions::VOICE_SPEAK).to_string());
+        map.insert("voice_use_vad".to_string(), self.contains(permissions::VOICE_USE_VAD).to_string());
     }
 }

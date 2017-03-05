@@ -224,7 +224,8 @@ impl Bot {
             // Event::ServerSync
             Event::ServerRoleCreate(server_id, role) => {
                 let server = self.server_by_server(server_id);
-                self.log(&server, &format!("Role Created: {:?}", role))?;
+                let map = role.into_map();
+                self.log_fmt(&server, server.config.server_role_create_msg.as_ref(), &map)?;
             },
             Event::ServerRoleUpdate(server_id, role) => {
                 let server = self.server_by_server(server_id);
