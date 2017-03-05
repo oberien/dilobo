@@ -74,7 +74,8 @@ pub struct ServerConfig {
     //pub channel_pins_update_msg: Option<String>,
     pub reaction_add_cached_msg: Option<String>,
     pub reaction_add_uncached_msg: Option<String>,
-    //pub reaction_remove_msg: Option<String>,
+    pub reaction_remove_cached_msg: Option<String>,
+    pub reaction_remove_uncached_msg: Option<String>,
 }
 
 impl Config {

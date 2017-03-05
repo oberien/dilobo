@@ -27,3 +27,5 @@ channel_create_msg = "{Type}channel <#{id}> ({name}) created with permissions {p
 channel_delete_msg = "{Type}channel #{name} deleted"
 reaction_add_cached_msg = "Reaction by <@{user_id}> with :{emoji_name}: in <#{channel_id}> to message \"{message_content}\" from <@{message_author_id}> ({message_author_name}#{message_author_discriminator})"
 reaction_add_uncached_msg = "Reaction by <@{user_id}> with :{emoji_name}: in <#{channel_id}> to message `{message_id}`"
+reaction_remove_cached_msg = "Reaction removed by <@{user_id}> with :{emoji_name}: in <#{channel_id}> to message \"{message_content}\" from <@{message_author_id}> ({message_author_name}#{message_author_discriminator})"
+reaction_remove_uncached_msg = "Reaction removed by <@{user_id}> with :{emoji_name}: in <#{channel_id}> to message `{message_id}`"
