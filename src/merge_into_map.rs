@@ -8,6 +8,8 @@ use discord::model::{
     MessageDelete,
     Role,
     PublicChannel,
+    Reaction,
+    ReactionEmoji,
 };
 use discord::model::permissions::{self, Permissions};
 
@@ -162,5 +164,30 @@ impl MergeIntoMap for PublicChannel {
         map.insert("bitrate".to_string(), bitrate.map(|b| b.to_string()).unwrap_or("None".to_string()));
         map.insert("user_limit".to_string(), user_limit.map(|limit| limit.to_string()).unwrap_or("None".to_string()));
         map.insert("last_pin_time".to_string(), last_pin_time.unwrap_or("None".to_string()));
+    }
+}
+
+impl MergeIntoMap for Reaction {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        let Reaction { channel_id, message_id, user_id, emoji } = self;
+        map.insert("channel_id".to_string(), channel_id.to_string());
+        map.insert("message_id".to_string(), message_id.to_string());
+        map.insert("user_id".to_string(), user_id.to_string());
+        emoji.merge_into_map_prefix(map, "emoji_");
+    }
+}
+
+impl MergeIntoMap for ReactionEmoji {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        match self {
+            ReactionEmoji::Unicode(name) => {
+                map.insert("name".to_string(), name);
+                map.insert("id".to_string(), "None".to_string());
+            },
+            ReactionEmoji::Custom { name, id } => {
+                map.insert("name".to_string(), name);
+                map.insert("id".to_string(), id.to_string());
+            }
+        }
     }
 }

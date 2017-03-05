@@ -285,7 +285,18 @@ impl Bot {
                 let server = self.server_by_channel(update.channel_id);
                 self.log(&server, &format!("Pins Update: {:?}", update))?;
             },
-            // Event::ReactionAdd
+            Event::ReactionAdd(reaction) => {
+                let server = self.server_by_channel(reaction.channel_id);
+                let message = server.messages.get(&reaction.message_id);
+                let mut map = reaction.into_map();
+                // TODO: improve infos in map with channel and user
+                if let Some(msg) = message {
+                    msg.clone().merge_into_map_prefix(&mut map, "message_");
+                    self.log_fmt(&server, server.config.reaction_add_cached_msg.as_ref(), &map)?;
+                } else {
+                    self.log_fmt(&server, server.config.reaction_add_uncached_msg.as_ref(), &map)?;
+                }
+            }
             Event::ReactionRemove(reaction) => {
                 let server = self.server_by_channel(reaction.channel_id);
                 self.log(&server, &format!("Reaction Removed: {:?}", reaction))?;
