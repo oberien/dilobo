@@ -256,7 +256,8 @@ impl Bot {
                 if let Channel::Public(channel) = channel {
                     self.channels.insert(channel.id, channel.server_id);
                     let server = self.server_by_channel(channel.id);
-                    self.log(&server, &format!("Channel Created: {:?}", channel))?;
+                    let map = channel.into_map();
+                    self.log_fmt(&server, server.config.channel_create_msg.as_ref(), &map)?;
                 }
             },
             Event::ChannelUpdate(channel) => {

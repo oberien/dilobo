@@ -7,6 +7,7 @@ use discord::model::{
     MessageType,
     MessageDelete,
     Role,
+    PublicChannel,
 };
 use discord::model::permissions::{self, Permissions};
 
@@ -141,5 +142,25 @@ impl MergeIntoMap for Permissions {
         map.insert("voice_mute_members".to_string(), self.contains(permissions::VOICE_MUTE_MEMBERS).to_string());
         map.insert("voice_speak".to_string(), self.contains(permissions::VOICE_SPEAK).to_string());
         map.insert("voice_use_vad".to_string(), self.contains(permissions::VOICE_USE_VAD).to_string());
+    }
+}
+
+impl MergeIntoMap for PublicChannel {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        let PublicChannel { id, name, server_id: _, kind, permission_overwrites,
+                topic, position, last_message_id, bitrate, user_limit,
+                last_pin_timestamp: last_pin_time } = self;
+        map.insert("id".to_string(), id.to_string());
+        map.insert("name".to_string(), name.to_string());
+        // server_id ignored
+        map.insert("Type".to_string(), format!("{:?}", kind));
+        // TODO: find better solution to provide lists
+        map.insert("perms".to_string(), format!("{:?}", permission_overwrites));
+        map.insert("topic".to_string(), topic.unwrap_or("None".to_string()));
+        map.insert("position".to_string(), position.to_string());
+        map.insert("last_message_id".to_string(), last_message_id.map(|id| id.to_string()).unwrap_or("None".to_string()));
+        map.insert("bitrate".to_string(), bitrate.map(|b| b.to_string()).unwrap_or("None".to_string()));
+        map.insert("user_limit".to_string(), user_limit.map(|limit| limit.to_string()).unwrap_or("None".to_string()));
+        map.insert("last_pin_time".to_string(), last_pin_time.unwrap_or("None".to_string()));
     }
 }
