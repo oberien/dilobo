@@ -138,8 +138,19 @@ impl Bot {
                 },
                 // Event::MessageAck
                 Event::MessageDelete(del) => {
+                    let message;
+                    {
+                        let server = self.server_by_channel_mut(del.channel_id);
+                        message = server.messages.remove(&del.message_id);
+                    }
                     let server = self.server_by_channel(del.channel_id);
-                    self.log(&server, &format!("Message Deleted: {:?}", del))?;
+                    if let Some(msg) = message {
+                        let map = msg.clone().into_map();
+                        self.log_fmt(&server, server.config.message_delete_cached_msg.as_ref(), &map)?;
+                    } else {
+                        let map = del.into_map();
+                        self.log_fmt(&server, server.config.message_delete_uncached_msg.as_ref(), &map)?;
+                    }
                 },
                 Event::MessageDeleteBulk(del) => {
                     let server = self.server_by_channel(del.channel_id);

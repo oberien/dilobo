@@ -26,6 +26,10 @@ impl<K, V> ExpiringMap<K, V> where K: ::std::cmp::Eq + ::std::hash::Hash + Clone
         self.map.get(key)
     }
 
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        self.map.remove(key)
+    }
+
     fn cleanup(&mut self) {
         let now = Instant::now();
         while self.queue.front().is_some() && self.queue.front().unwrap().1 < now {

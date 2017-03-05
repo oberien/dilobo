@@ -5,6 +5,7 @@ use discord::model::{
     User,
     Message,
     MessageType,
+    MessageDelete,
 };
 
 pub trait MergeIntoMap {
@@ -82,5 +83,13 @@ impl MergeIntoMap for Message {
         map.insert("attachments".to_string(), format!("{:?}", attachments));
         // TODO: find better solution to provide lists
         map.insert("embeds".to_string(), format!("{:?}", embeds));
+    }
+}
+
+impl MergeIntoMap for MessageDelete {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        let MessageDelete { channel_id, message_id } = self;
+        map.insert("channel_id".to_string(), channel_id.to_string());
+        map.insert("message_id".to_string(), message_id.to_string());
     }
 }

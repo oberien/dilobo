@@ -15,5 +15,7 @@ log_channel_name = "log"
 
 # Messages
 message_create_msg = "New message from <@{author_id}> ({author_name}#{author_discriminator}) in <#{channel_id}> at {time}: \"{content}\""
+message_delete_cached_msg = "Message deleted from <@{author_id}> ({author_name}#{author_discriminator}) in <#{channel_id}>: \"{content}\""
+message_delete_uncached_msg = "Message deleted (id: {message_id}) in <#{channel_id}>"
 server_member_add_msg = "New {type} joined: <@{id}> ({name}#{discriminator}) at {time} with nick \"{nick}\". Roles: {roles}, Mute: {mute}, Deaf: {deaf}"
 server_member_remove_msg = "{type} left: <@{id}> ({name}#{discriminator})"
