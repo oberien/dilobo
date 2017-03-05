@@ -48,8 +48,7 @@ pub struct ServerConfig {
     //pub message_update_msg: Option<String>,
     pub message_delete_cached_msg: Option<String>,
     pub message_delete_uncached_msg: Option<String>,
-    // TODO: Handle in-cache messages and cache misses
-    //pub message_delete_bulk_msg: Option<String>,
+    pub message_delete_bulk_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub server_update_msg: Option<String>,
     pub server_member_add_msg: Option<String>,

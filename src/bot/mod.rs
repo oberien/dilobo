@@ -12,6 +12,7 @@ use discord::model::{
     ServerId,
     ChannelId,
     Channel,
+    MessageDelete,
 };
 
 use config::Config;
@@ -98,146 +99,163 @@ impl Bot {
         loop {
             let evt = self.con.recv_event()?;
             println!("evt: {:?}", evt);
-            match evt {
-                // Event::Ready
-                // Event::Resumed
-                // Event::UserUpdate
-                // Event::UserNoteUpdate
-                // Event::UserSettingsUpdate
-                // Event::UserServerSettingsUpdate
-                // Event::VoiceStateUpdate
-                // Event::CallCreate
-                // Event::CallUpdate
-                // Event::CallDelete
-                // Event::ChannelRecipientAdd
-                // Event::ChannelRecipientRemove
-                // Event::TypingStart
-                // Event::PresenceUpdate
-                // Event::PresencesReplace
-                // Event::RelationshipAdd
-                // Event::RelationshipRemove
-                Event::MessageCreate(msg) => {
-                    {
-                        let mut server = self.server_by_channel_mut(msg.channel_id);
-                        server.messages.insert(msg.id, msg.clone());
-                    }
-                    let server = self.server_by_channel(msg.channel_id);
-                    // ignore new messages in log channel which we have created
-                    if msg.channel_id != server.log_channel || msg.author.id != self.user.id {
-                        let map = msg.into_map();
-                        self.log_fmt(&server, server.config.message_create_msg.as_ref(), &map)?;
-                    }
-                },
-                Event::MessageUpdate(update) => {
-                    let server = self.server_by_channel(update.channel_id);
-                    // ignore log channel
-                    // TODO: only ignore if it's a media embed update
-                    if server.log_channel != update.channel_id {
-                        self.log(&server, &format!("Message Updated: {:?}", update))?;
-                    }
-                },
-                // Event::MessageAck
-                Event::MessageDelete(del) => {
-                    let message;
-                    {
-                        let server = self.server_by_channel_mut(del.channel_id);
-                        message = server.messages.remove(&del.message_id);
-                    }
-                    let server = self.server_by_channel(del.channel_id);
-                    if let Some(msg) = message {
-                        let map = msg.clone().into_map();
-                        self.log_fmt(&server, server.config.message_delete_cached_msg.as_ref(), &map)?;
-                    } else {
-                        let map = del.into_map();
-                        self.log_fmt(&server, server.config.message_delete_uncached_msg.as_ref(), &map)?;
-                    }
-                },
-                Event::MessageDeleteBulk(del) => {
-                    let server = self.server_by_channel(del.channel_id);
-                    self.log(&server, &format!("Message Bulk Delete: {:?}", del))?;
-                },
-                // Event::ServerCreate
-                // Event::ServerUpdate
-                // Event::ServerDelete
-                Event::ServerMemberAdd(server_id, member) => {
-                    let server = self.server_by_server(server_id);
-                    let map = member.into_map();
-                    self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), &map)?;
-                },
-                Event::ServerMemberUpdate(update) => {
-                    let server = self.server_by_server(update.server_id);
-                    self.log(&server, &format!("Member Changed: {:?}", update))?;
-                },
-                Event::ServerMemberRemove(server_id, user) => {
-                    let server = self.server_by_server(server_id);
-                    let map = user.into_map();
-                    self.log_fmt(&server, server.config.server_member_remove_msg.as_ref(), &map)?;
-                },
-                // Event::ServerMembersChunk
-                // Event::ServerSync
-                Event::ServerRoleCreate(server_id, role) => {
-                    let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("Role Created: {:?}", role))?;
-                },
-                Event::ServerRoleUpdate(server_id, role) => {
-                    let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("Role Changed: {:?}", role))?;
-                },
-                Event::ServerRoleDelete(server_id, role_id) => {
-                    let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("Role Deleted: {:?}", role_id))?;
-                },
-                Event::ServerBanAdd(server_id, user) => {
-                    let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("User Banned: {:?}", user))?;
-                },
-                Event::ServerBanRemove(server_id, user) => {
-                    let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("User Unbanned: {:?}", user))?;
-                },
-                // Event:ServerIntegrationsUpdate
-                Event::ServerEmojisUpdate(server_id, emojis) => {
-                    let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("Emojis Changed: {:?}", emojis))?;
-                },
-                Event::ChannelCreate(channel) => {
-                    if let Channel::Public(channel) = channel {
-                        self.channels.insert(channel.id, channel.server_id);
-                        let server = self.server_by_channel(channel.id);
-                        self.log(&server, &format!("Channel Created: {:?}", channel))?;
-                    }
-                },
-                Event::ChannelUpdate(channel) => {
-                    if let Channel::Public(channel) = channel {
-                        let server = self.server_by_channel(channel.id);
-                        self.log(&server, &format!("Channel Changed: {:?}", channel))?;
-                    }
-                },
-                Event::ChannelDelete(channel) => {
-                    if let Channel::Public(channel) = channel {
-                        self.channels.remove(&channel.id);
-                        let server = self.server_by_channel(channel.id);
-                        self.log(&server, &format!("Channel Deleted: {:?}", channel))?;
-                    }
-                },
-                Event::ChannelPinsAck(ack) => {
-                    let server = self.server_by_channel(ack.channel_id);
-                    self.log(&server, &format!("Pins Ack: {:?}", ack))?;
-                },
-                Event::ChannelPinsUpdate(update) => {
-                    let server = self.server_by_channel(update.channel_id);
-                    self.log(&server, &format!("Pins Update: {:?}", update))?;
-                },
-                // Event::ReactionAdd
-                Event::ReactionRemove(reaction) => {
-                    let server = self.server_by_channel(reaction.channel_id);
-                    self.log(&server, &format!("Reaction Removed: {:?}", reaction))?;
-                },
-                _ => ()
-            }
+            self.handle_event(evt)?;
             println!();
             println!();
         }
+    }
+
+    fn handle_event(&mut self, evt: Event) -> Result<()> {
+        match evt {
+            // Event::Ready
+            // Event::Resumed
+            // Event::UserUpdate
+            // Event::UserNoteUpdate
+            // Event::UserSettingsUpdate
+            // Event::UserServerSettingsUpdate
+            // Event::VoiceStateUpdate
+            // Event::CallCreate
+            // Event::CallUpdate
+            // Event::CallDelete
+            // Event::ChannelRecipientAdd
+            // Event::ChannelRecipientRemove
+            // Event::TypingStart
+            // Event::PresenceUpdate
+            // Event::PresencesReplace
+            // Event::RelationshipAdd
+            // Event::RelationshipRemove
+            Event::MessageCreate(msg) => {
+                {
+                    let mut server = self.server_by_channel_mut(msg.channel_id);
+                    server.messages.insert(msg.id, msg.clone());
+                }
+                let server = self.server_by_channel(msg.channel_id);
+                // ignore new messages in log channel which we have created
+                if msg.channel_id != server.log_channel || msg.author.id != self.user.id {
+                    let map = msg.into_map();
+                    self.log_fmt(&server, server.config.message_create_msg.as_ref(), &map)?;
+                }
+            },
+            Event::MessageUpdate(update) => {
+                let server = self.server_by_channel(update.channel_id);
+                // ignore log channel
+                // TODO: only ignore if it's a media embed update
+                if server.log_channel != update.channel_id {
+                    self.log(&server, &format!("Message Updated: {:?}", update))?;
+                }
+            },
+            // Event::MessageAck
+            Event::MessageDelete(del) => {
+                let message;
+                {
+                    let server = self.server_by_channel_mut(del.channel_id);
+                    message = server.messages.remove(&del.message_id);
+                }
+                let server = self.server_by_channel(del.channel_id);
+                if let Some(msg) = message {
+                    let map = msg.clone().into_map();
+                    self.log_fmt(&server, server.config.message_delete_cached_msg.as_ref(), &map)?;
+                } else {
+                    let map = del.into_map();
+                    self.log_fmt(&server, server.config.message_delete_uncached_msg.as_ref(), &map)?;
+                }
+            },
+            Event::MessageDeleteBulk(del) => {
+                {
+                    let server = self.server_by_channel(del.channel_id);
+                    let mut map = HashMap::new();
+                    map.insert("channel_id".to_string(), del.channel_id.to_string());
+                    map.insert("count".to_string(), del.ids.len().to_string());
+                    self.log_fmt(&server, server.config.message_delete_bulk_msg.as_ref(), &map)?;
+                }
+                for id in del.ids {
+                    let evt = Event::MessageDelete(MessageDelete {
+                        channel_id: del.channel_id,
+                        message_id: id,
+                    });
+                    self.handle_event(evt)?;
+                }
+            },
+            // Event::ServerCreate
+            // Event::ServerUpdate
+            // Event::ServerDelete
+            Event::ServerMemberAdd(server_id, member) => {
+                let server = self.server_by_server(server_id);
+                let map = member.into_map();
+                self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), &map)?;
+            },
+            Event::ServerMemberUpdate(update) => {
+                let server = self.server_by_server(update.server_id);
+                self.log(&server, &format!("Member Changed: {:?}", update))?;
+            },
+            Event::ServerMemberRemove(server_id, user) => {
+                let server = self.server_by_server(server_id);
+                let map = user.into_map();
+                self.log_fmt(&server, server.config.server_member_remove_msg.as_ref(), &map)?;
+            },
+            // Event::ServerMembersChunk
+            // Event::ServerSync
+            Event::ServerRoleCreate(server_id, role) => {
+                let server = self.server_by_server(server_id);
+                self.log(&server, &format!("Role Created: {:?}", role))?;
+            },
+            Event::ServerRoleUpdate(server_id, role) => {
+                let server = self.server_by_server(server_id);
+                self.log(&server, &format!("Role Changed: {:?}", role))?;
+            },
+            Event::ServerRoleDelete(server_id, role_id) => {
+                let server = self.server_by_server(server_id);
+                self.log(&server, &format!("Role Deleted: {:?}", role_id))?;
+            },
+            Event::ServerBanAdd(server_id, user) => {
+                let server = self.server_by_server(server_id);
+                self.log(&server, &format!("User Banned: {:?}", user))?;
+            },
+            Event::ServerBanRemove(server_id, user) => {
+                let server = self.server_by_server(server_id);
+                self.log(&server, &format!("User Unbanned: {:?}", user))?;
+            },
+            // Event:ServerIntegrationsUpdate
+            Event::ServerEmojisUpdate(server_id, emojis) => {
+                let server = self.server_by_server(server_id);
+                self.log(&server, &format!("Emojis Changed: {:?}", emojis))?;
+            },
+            Event::ChannelCreate(channel) => {
+                if let Channel::Public(channel) = channel {
+                    self.channels.insert(channel.id, channel.server_id);
+                    let server = self.server_by_channel(channel.id);
+                    self.log(&server, &format!("Channel Created: {:?}", channel))?;
+                }
+            },
+            Event::ChannelUpdate(channel) => {
+                if let Channel::Public(channel) = channel {
+                    let server = self.server_by_channel(channel.id);
+                    self.log(&server, &format!("Channel Changed: {:?}", channel))?;
+                }
+            },
+            Event::ChannelDelete(channel) => {
+                if let Channel::Public(channel) = channel {
+                    self.channels.remove(&channel.id);
+                    let server = self.server_by_channel(channel.id);
+                    self.log(&server, &format!("Channel Deleted: {:?}", channel))?;
+                }
+            },
+            Event::ChannelPinsAck(ack) => {
+                let server = self.server_by_channel(ack.channel_id);
+                self.log(&server, &format!("Pins Ack: {:?}", ack))?;
+            },
+            Event::ChannelPinsUpdate(update) => {
+                let server = self.server_by_channel(update.channel_id);
+                self.log(&server, &format!("Pins Update: {:?}", update))?;
+            },
+            // Event::ReactionAdd
+            Event::ReactionRemove(reaction) => {
+                let server = self.server_by_channel(reaction.channel_id);
+                self.log(&server, &format!("Reaction Removed: {:?}", reaction))?;
+            },
+            _ => ()
+        }
+        Ok(())
     }
 
     fn server_by_channel(&self, channel_id: ChannelId) -> &Server {
