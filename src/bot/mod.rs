@@ -268,9 +268,13 @@ impl Bot {
             },
             Event::ChannelDelete(channel) => {
                 if let Channel::Public(channel) = channel {
-                    self.channels.remove(&channel.id);
-                    let server = self.server_by_channel(channel.id);
-                    self.log(&server, &format!("Channel Deleted: {:?}", channel))?;
+                    let channel_id = channel.id;
+                    {
+                        let server = self.server_by_channel(channel.id);
+                        let map = channel.into_map();
+                        self.log_fmt(&server, server.config.channel_delete_msg.as_ref(), &map)?;
+                    }
+                    self.channels.remove(&channel_id);
                 }
             },
             Event::ChannelPinsAck(ack) => {

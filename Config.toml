@@ -24,3 +24,4 @@ server_role_create_msg = "Role <@&{id}> ({name}) created with permissions {perms
 server_ban_add_msg = "{Type} banned: <@{id}> ({name}#{discriminator})"
 server_ban_remove_msg = "{Type} UNbanned: <@{id}> ({name}#{discriminator})"
 channel_create_msg = "{Type}channel <#{id}> ({name}) created with permissions {perms}"
+channel_delete_msg = "{Type}channel #{name} deleted"

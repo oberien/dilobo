@@ -68,7 +68,7 @@ pub struct ServerConfig {
     pub channel_create_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub channel_update_msg: Option<String>,
-    //pub channel_delete_msg: Option<String>,
+    pub channel_delete_msg: Option<String>,
     //pub channel_pins_ack_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub channel_pins_update_msg: Option<String>,
