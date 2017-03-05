@@ -2,9 +2,18 @@ mod server;
 
 use std::collections::HashMap;
 
+use strfmt::strfmt;
 use discord::Result;
 use discord::{Discord, Connection};
-use discord::model::{OnlineStatus, Event, ServerId, ChannelId, Channel};
+use discord::model::{
+    OnlineStatus,
+    Event,
+    ServerId,
+    ChannelId,
+    Channel,
+    Member,
+    User,
+};
 
 use config::Config;
 use self::server::Server;
@@ -30,12 +39,12 @@ impl Bot {
         }
     }
 
-    pub fn init(&mut self, config: &Config) -> Result<()> {
+    pub fn init(&mut self, mut config: Config) -> Result<()> {
         self.con.set_presence(None, OnlineStatus::Online, false);
         let mut servers = self.dis.get_servers().unwrap();
         for server in servers.drain(..) {
             // check if server is configured
-            let server_config = config.server.iter().find(|s| {
+            let index = config.server.iter().enumerate().find(|&(_, ref s)| {
                 match s.server_id {
                     Some(id) => match s.server_name {
                         Some(ref name) => server.id == ServerId(id) && server.name == *name,
@@ -46,13 +55,13 @@ impl Bot {
                         None => panic!("No server_id or server_name given to identify the server.")
                     }
                 }
-            });
+            }).map(|(i, _)| i);
             // not in server config
-            if let None = server_config {
+            if let None = index {
                 println!("The bot is member of unconfigured server: {:?}", server);
                 continue;
             }
-            let server_config = server_config.unwrap();
+            let server_config = config.server.swap_remove(index.unwrap());
             let mut log_channel = None;
 
             let channels = self.dis.get_server_channels(server.id).unwrap();
@@ -77,7 +86,7 @@ impl Bot {
                 panic!("Couldn't find log channel for server.");
             }
             let log_channel = log_channel.unwrap();
-            let server = Server::new(server, log_channel);
+            let server = Server::new(server_config, server, log_channel);
             self.servers.insert(server.server.id, server);
         }
         Ok(())
@@ -132,7 +141,22 @@ impl Bot {
                 // Event::ServerDelete
                 Event::ServerMemberAdd(server_id, member) => {
                     let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("Member Joined: {:?}", member))?;
+                    let Member { user, roles, nick, joined_at: time, mute, deaf } = member;
+                    let User { id, name, discriminator, avatar, bot } = user;
+                    let mut map = HashMap::new();
+                    map.insert("type".to_string(), if bot { "Bot".to_string() } else { "Member".to_string() });
+                    // TODO: find better way to format roles
+                    map.insert("roles".to_string(), format!("{:?}", roles));
+                    map.insert("nick".to_string(), nick.unwrap_or("".to_string()));
+                    map.insert("time".to_string(), time);
+                    // TODO: find better way to format mute and deaf
+                    map.insert("mute".to_string(), mute.to_string());
+                    map.insert("deaf".to_string(), deaf.to_string());
+                    map.insert("id".to_string(), id.to_string());
+                    map.insert("name".to_string(), name);
+                    map.insert("discriminator".to_string(), discriminator.to_string());
+                    map.insert("avatar".to_string(), avatar.unwrap_or("None".to_string()));
+                    self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), map)?;
                 },
                 Event::ServerMemberUpdate(update) => {
                     let server = self.server_by_server(update.server_id);
@@ -184,7 +208,7 @@ impl Bot {
                 },
                 Event::ChannelDelete(channel) => {
                     if let Channel::Public(channel) = channel {
-                        self.channels.remove(channel.id);
+                        self.channels.remove(&channel.id);
                         let server = self.server_by_channel(channel.id);
                         self.log(&server, &format!("Channel Deleted: {:?}", channel))?;
                     }
@@ -228,6 +252,16 @@ impl Bot {
     fn server_by_server_mut(&mut self, server_id: ServerId) -> &mut Server {
         self.servers.get_mut(&server_id)
             .expect(&format!("could not find server for server_id {}", server_id))
+    }
+
+    fn log_fmt(&self, server: &Server, fmt: Option<&String>, map: HashMap<String, String>) -> Result<()> {
+        if let Some(fmt) = fmt {
+            // TODO: user error_chain instead of unwrap
+            let msg = strfmt(&fmt, &map).unwrap();
+            self.log(server, &msg)
+        } else {
+            Ok(())
+        }
     }
 
     fn log(&self, server: &Server, msg: &str) -> Result<()> {

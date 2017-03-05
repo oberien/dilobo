@@ -1,6 +1,7 @@
 extern crate toml;
 extern crate rustc_serialize;
 extern crate discord;
+extern crate strfmt;
 
 mod expiring_map;
 mod config;
@@ -27,7 +28,7 @@ fn main() {
     }
     loop {
         let mut bot = Bot::new(&config);
-        if let Err(err) = bot.init(&config) {
+        if let Err(err) = bot.init(config.clone()) {
             println!("Error during bot.init: {:?}", err);
             continue;
         }
