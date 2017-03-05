@@ -22,3 +22,4 @@ server_member_add_msg = "New {type} joined: <@{id}> ({name}#{discriminator}) at 
 server_member_remove_msg = "{Type} left: <@{id}> ({name}#{discriminator})"
 server_role_create_msg = "Role <@&{id}> ({name}) created with permissions {perms}"
 server_ban_add_msg = "{Type} banned: <@{id}> ({name}#{discriminator})"
+server_ban_remove_msg = "{Type} UNbanned: <@{id}> ({name}#{discriminator})"

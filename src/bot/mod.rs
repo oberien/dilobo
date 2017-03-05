@@ -244,7 +244,8 @@ impl Bot {
             },
             Event::ServerBanRemove(server_id, user) => {
                 let server = self.server_by_server(server_id);
-                self.log(&server, &format!("User Unbanned: {:?}", user))?;
+                let map = user.into_map();
+                self.log_fmt(&server, server.config.server_ban_remove_msg.as_ref(), &map)?;
             },
             // Event:ServerIntegrationsUpdate
             Event::ServerEmojisUpdate(server_id, emojis) => {
