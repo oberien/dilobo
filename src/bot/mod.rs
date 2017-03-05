@@ -171,6 +171,7 @@ impl Bot {
                 },
                 Event::ChannelCreate(channel) => {
                     if let Channel::Public(channel) = channel {
+                        self.channels.insert(channel.id, channel.server_id);
                         let server = self.server_by_channel(channel.id);
                         self.log(&server, &format!("Channel Created: {:?}", channel))?;
                     }
@@ -183,6 +184,7 @@ impl Bot {
                 },
                 Event::ChannelDelete(channel) => {
                     if let Channel::Public(channel) = channel {
+                        self.channels.remove(channel.id);
                         let server = self.server_by_channel(channel.id);
                         self.log(&server, &format!("Channel Deleted: {:?}", channel))?;
                     }
