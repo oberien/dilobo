@@ -111,6 +111,11 @@ impl Bot {
                 },
                 Event::MessageUpdate(update) => {
                     let server = self.server_by_channel(update.channel_id);
+                    // ignore log channel
+                    // TODO: only ignore if it's a media embed update
+                    if server.log_channel == update.channel_id {
+                        continue;
+                    }
                     self.log(&server, &format!("Message Updated: {:?}", update))?;
                 },
                 // Event::MessageAck
