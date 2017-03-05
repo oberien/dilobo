@@ -90,6 +90,8 @@ impl Bot {
             }
             let log_channel = log_channel.unwrap();
             let server = Server::new(server_config, server, log_channel);
+            println!("Successfully logging for server {:?}", server);
+            println!();
             self.servers.insert(server.server.id, server);
         }
         Ok(())
@@ -237,7 +239,8 @@ impl Bot {
             },
             Event::ServerBanAdd(server_id, user) => {
                 let server = self.server_by_server(server_id);
-                self.log(&server, &format!("User Banned: {:?}", user))?;
+                let map = user.into_map();
+                self.log_fmt(&server, server.config.server_ban_add_msg.as_ref(), &map)?;
             },
             Event::ServerBanRemove(server_id, user) => {
                 let server = self.server_by_server(server_id);

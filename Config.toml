@@ -19,5 +19,6 @@ message_delete_cached_msg = "Message deleted from <@{author_id}> ({author_name}#
 message_delete_uncached_msg = "Message deleted (id: {message_id}) in <#{channel_id}>"
 message_delete_bulk_msg = "{count} messages deleted in <#{channel_id}>"
 server_member_add_msg = "New {type} joined: <@{id}> ({name}#{discriminator}) at {time} with nick \"{nick}\". Roles: {roles}, Mute: {mute}, Deaf: {deaf}"
-server_member_remove_msg = "{type} left: <@{id}> ({name}#{discriminator})"
+server_member_remove_msg = "{Type} left: <@{id}> ({name}#{discriminator})"
 server_role_create_msg = "Role <@&{id}> ({name}) created with permissions {perms}"
+server_ban_add_msg = "{Type} banned: <@{id}> ({name}#{discriminator})"

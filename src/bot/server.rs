@@ -5,6 +5,7 @@ use discord::model::{ServerInfo, ChannelId, MessageId, Message};
 use expiring_map::ExpiringMap;
 use config::ServerConfig;
 
+#[derive(Debug, Clone)]
 pub struct Server {
     pub config: ServerConfig,
     pub server: ServerInfo,

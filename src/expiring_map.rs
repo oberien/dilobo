@@ -1,7 +1,8 @@
 use std::collections::{VecDeque, HashMap};
 use std::time::{Instant, Duration};
 
-pub struct ExpiringMap<K, V> {
+#[derive(Debug, Clone)]
+pub struct ExpiringMap<K, V> where K: ::std::cmp::Eq + ::std::hash::Hash {
     map: HashMap<K, V>,
     queue: VecDeque<(K, Instant)>,
     ttl: Duration,

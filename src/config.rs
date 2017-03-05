@@ -61,7 +61,7 @@ pub struct ServerConfig {
     // TODO: Differenciate between updates
     //pub server_role_update_msg: Option<String>,
     //pub server_role_delete_msg: Option<String>,
-    //pub server_ban_add_msg: Option<String>,
+    pub server_ban_add_msg: Option<String>,
     //pub server_ban_remove_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub server_emojis_update_msg: Option<String>,
