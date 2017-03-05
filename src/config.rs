@@ -55,7 +55,7 @@ pub struct ServerConfig {
     pub server_member_add_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub server_member_update_msg: Option<String>,
-    //pub server_member_remove_msg: Option<String>,
+    pub server_member_remove_msg: Option<String>,
     //pub server_members_chunk_msg: Option<String>,
     //pub server_sync_msg: Option<String>,
     //pub server_role_create_msg: Option<String>,

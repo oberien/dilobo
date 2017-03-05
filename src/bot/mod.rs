@@ -144,7 +144,6 @@ impl Bot {
                     let Member { user, roles, nick, joined_at: time, mute, deaf } = member;
                     let User { id, name, discriminator, avatar, bot } = user;
                     let mut map = HashMap::new();
-                    map.insert("type".to_string(), if bot { "Bot".to_string() } else { "Member".to_string() });
                     // TODO: find better way to format roles
                     map.insert("roles".to_string(), format!("{:?}", roles));
                     map.insert("nick".to_string(), nick.unwrap_or("".to_string()));
@@ -156,7 +155,8 @@ impl Bot {
                     map.insert("name".to_string(), name);
                     map.insert("discriminator".to_string(), discriminator.to_string());
                     map.insert("avatar".to_string(), avatar.unwrap_or("None".to_string()));
-                    self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), map)?;
+                    map.insert("type".to_string(), if bot { "Bot".to_string() } else { "Member".to_string() });
+                    self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), &map)?;
                 },
                 Event::ServerMemberUpdate(update) => {
                     let server = self.server_by_server(update.server_id);
@@ -164,7 +164,14 @@ impl Bot {
                 },
                 Event::ServerMemberRemove(server_id, user) => {
                     let server = self.server_by_server(server_id);
-                    self.log(&server, &format!("Member Left: {:?}", user))?;
+                    let User { id, name, discriminator, avatar, bot } = user;
+                    let mut map = HashMap::new();
+                    map.insert("id".to_string(), id.to_string());
+                    map.insert("name".to_string(), name);
+                    map.insert("discriminator".to_string(), discriminator.to_string());
+                    map.insert("avatar".to_string(), avatar.unwrap_or("None".to_string()));
+                    map.insert("type".to_string(), if bot { "Bot".to_string() } else { "Member".to_string() });
+                    self.log_fmt(&server, server.config.server_member_remove_msg.as_ref(), &map)?;
                 },
                 // Event::ServerMembersChunk
                 // Event::ServerSync
@@ -254,10 +261,10 @@ impl Bot {
             .expect(&format!("could not find server for server_id {}", server_id))
     }
 
-    fn log_fmt(&self, server: &Server, fmt: Option<&String>, map: HashMap<String, String>) -> Result<()> {
+    fn log_fmt(&self, server: &Server, fmt: Option<&String>, map: &HashMap<String, String>) -> Result<()> {
         if let Some(fmt) = fmt {
             // TODO: user error_chain instead of unwrap
-            let msg = strfmt(&fmt, &map).unwrap();
+            let msg = strfmt(&fmt, map).unwrap();
             self.log(server, &msg)
         } else {
             Ok(())

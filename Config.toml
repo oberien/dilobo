@@ -15,3 +15,4 @@ log_channel_name = "log"
 
 # Messages
 server_member_add_msg = "New {type} joined: <@{id}> ({name}#{discriminator}) at {time} with nick \"{nick}\". Roles: {roles}, Mute: {mute}, Deaf: {deaf}"
+server_member_remove_msg = "{type} left: <@{id}> ({name}#{discriminator})"
