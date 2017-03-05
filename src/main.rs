@@ -4,6 +4,7 @@ extern crate discord;
 extern crate strfmt;
 
 mod expiring_map;
+mod merge_into_map;
 mod config;
 mod bot;
 

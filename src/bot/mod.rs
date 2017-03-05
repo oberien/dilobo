@@ -6,21 +6,22 @@ use strfmt::strfmt;
 use discord::Result;
 use discord::{Discord, Connection};
 use discord::model::{
+    CurrentUser,
     OnlineStatus,
     Event,
     ServerId,
     ChannelId,
     Channel,
-    Member,
-    User,
 };
 
 use config::Config;
+use merge_into_map::MergeIntoMap;
 use self::server::Server;
 
 pub struct Bot {
     dis: Discord,
     con: Connection,
+    user: CurrentUser,
     servers: HashMap<ServerId, Server>,
     channels: HashMap<ChannelId, ServerId>,
 }
@@ -34,6 +35,7 @@ impl Bot {
         Bot {
             dis: discord,
             con: con,
+            user: ready.user,
             servers: HashMap::new(),
             channels: HashMap::new(),
         }
@@ -115,17 +117,24 @@ impl Bot {
                 // Event::RelationshipAdd
                 // Event::RelationshipRemove
                 Event::MessageCreate(msg) => {
-                    let server = self.server_by_channel_mut(msg.channel_id);
-                    server.messages.insert(msg.id, msg);
+                    {
+                        let mut server = self.server_by_channel_mut(msg.channel_id);
+                        server.messages.insert(msg.id, msg.clone());
+                    }
+                    let server = self.server_by_channel(msg.channel_id);
+                    // ignore new messages in log channel which we have created
+                    if msg.channel_id != server.log_channel || msg.author.id != self.user.id {
+                        let map = msg.into_map();
+                        self.log_fmt(&server, server.config.message_create_msg.as_ref(), &map)?;
+                    }
                 },
                 Event::MessageUpdate(update) => {
                     let server = self.server_by_channel(update.channel_id);
                     // ignore log channel
                     // TODO: only ignore if it's a media embed update
-                    if server.log_channel == update.channel_id {
-                        continue;
+                    if server.log_channel != update.channel_id {
+                        self.log(&server, &format!("Message Updated: {:?}", update))?;
                     }
-                    self.log(&server, &format!("Message Updated: {:?}", update))?;
                 },
                 // Event::MessageAck
                 Event::MessageDelete(del) => {
@@ -141,21 +150,7 @@ impl Bot {
                 // Event::ServerDelete
                 Event::ServerMemberAdd(server_id, member) => {
                     let server = self.server_by_server(server_id);
-                    let Member { user, roles, nick, joined_at: time, mute, deaf } = member;
-                    let User { id, name, discriminator, avatar, bot } = user;
-                    let mut map = HashMap::new();
-                    // TODO: find better way to format roles
-                    map.insert("roles".to_string(), format!("{:?}", roles));
-                    map.insert("nick".to_string(), nick.unwrap_or("".to_string()));
-                    map.insert("time".to_string(), time);
-                    // TODO: find better way to format mute and deaf
-                    map.insert("mute".to_string(), mute.to_string());
-                    map.insert("deaf".to_string(), deaf.to_string());
-                    map.insert("id".to_string(), id.to_string());
-                    map.insert("name".to_string(), name);
-                    map.insert("discriminator".to_string(), discriminator.to_string());
-                    map.insert("avatar".to_string(), avatar.unwrap_or("None".to_string()));
-                    map.insert("type".to_string(), if bot { "Bot".to_string() } else { "Member".to_string() });
+                    let map = member.into_map();
                     self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), &map)?;
                 },
                 Event::ServerMemberUpdate(update) => {
@@ -164,13 +159,7 @@ impl Bot {
                 },
                 Event::ServerMemberRemove(server_id, user) => {
                     let server = self.server_by_server(server_id);
-                    let User { id, name, discriminator, avatar, bot } = user;
-                    let mut map = HashMap::new();
-                    map.insert("id".to_string(), id.to_string());
-                    map.insert("name".to_string(), name);
-                    map.insert("discriminator".to_string(), discriminator.to_string());
-                    map.insert("avatar".to_string(), avatar.unwrap_or("None".to_string()));
-                    map.insert("type".to_string(), if bot { "Bot".to_string() } else { "Member".to_string() });
+                    let map = user.into_map();
                     self.log_fmt(&server, server.config.server_member_remove_msg.as_ref(), &map)?;
                 },
                 // Event::ServerMembersChunk

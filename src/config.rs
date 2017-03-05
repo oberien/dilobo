@@ -43,7 +43,7 @@ pub struct ServerConfig {
     //pub presences_replace_msg: Option<String>,
     //pub relationship_add_msg: Option<String>,
     //pub relationship_remove_msg: Option<String>,
-    //pub message_create_msg: Option<String>,
+    pub message_create_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub message_update_msg: Option<String>,
     // TODO: Handle in-cache messages and cache misses

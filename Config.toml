@@ -14,5 +14,6 @@ log_channel_name = "log"
 # log_channel_id = 42
 
 # Messages
+message_create_msg = "New message from <@{author_id}> ({author_name}#{author_discriminator}) at {time}: \"{content}\""
 server_member_add_msg = "New {type} joined: <@{id}> ({name}#{discriminator}) at {time} with nick \"{nick}\". Roles: {roles}, Mute: {mute}, Deaf: {deaf}"
 server_member_remove_msg = "{type} left: <@{id}> ({name}#{discriminator})"
