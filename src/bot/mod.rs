@@ -168,13 +168,40 @@ impl Bot {
                     map.insert("count".to_string(), del.ids.len().to_string());
                     self.log_fmt(&server, server.config.message_delete_bulk_msg.as_ref(), &map)?;
                 }
-                for id in del.ids {
-                    let evt = Event::MessageDelete(MessageDelete {
-                        channel_id: del.channel_id,
-                        message_id: id,
-                    });
-                    self.handle_event(evt)?;
+                let mut text = String::new();
+                for message_id in del.ids {
+                    let cached;
+                    {
+                        let server = self.server_by_channel_mut(del.channel_id);
+                        cached = server.messages.remove(&message_id);
+                    }
+                    let server = self.server_by_channel(del.channel_id);
+                    let line = match cached {
+                        // TODO: use error_chain instead of unwrap
+                        Some(msg) => server.config.message_delete_cached_msg
+                            .as_ref().map(|fmt| strfmt(fmt, &msg.into_map()).unwrap()),
+                        None => {
+                            let del = MessageDelete {
+                                channel_id: del.channel_id,
+                                message_id: message_id,
+                            };
+                            server.config.message_delete_uncached_msg
+                                .as_ref().map(|fmt| strfmt(fmt, &del.into_map()).unwrap())
+                        }
+                    };
+                    if let Some(line) = line {
+                        if text.len() + line.len() > 2000 {
+                            let server = self.server_by_channel(del.channel_id);
+                            self.log(&server, &text)?;
+                            text = line;
+                        } else {
+                            text += "\n";
+                            text += &line;
+                        }
+                    }
                 }
+                let server = self.server_by_channel(del.channel_id);
+                self.log(&server, &text)?;
             },
             // Event::ServerCreate
             // Event::ServerUpdate
@@ -283,10 +310,9 @@ impl Bot {
         if let Some(fmt) = fmt {
             // TODO: user error_chain instead of unwrap
             let msg = strfmt(&fmt, map).unwrap();
-            self.log(server, &msg)
-        } else {
-            Ok(())
+            self.log(server, &msg)?;
         }
+        Ok(())
     }
 
     fn log(&self, server: &Server, msg: &str) -> Result<()> {
