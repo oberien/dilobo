@@ -7,6 +7,8 @@ use discord::Result;
 use discord::{Discord, Connection};
 use discord::model::{
     CurrentUser,
+    User,
+    UserId,
     OnlineStatus,
     Event,
     ServerId,
@@ -16,7 +18,7 @@ use discord::model::{
 };
 
 use config::Config;
-use modelext::MergeIntoMap;
+use modelext::{MergeIntoMap, Diff, MessageUpdateDiff};
 use self::server::Server;
 
 pub struct Bot {
@@ -140,10 +142,49 @@ impl Bot {
             },
             Event::MessageUpdate(update) => {
                 let server = self.server_by_channel(update.channel_id);
-                // ignore log channel
-                // TODO: only ignore if it's a media embed update
-                if server.log_channel != update.channel_id {
-                    self.log(&server, &format!("Message Updated: {:?}", update))?;
+                let message = server.messages.get(&update.id);
+                // If the message's channel is the log_channel and it has something
+                // embedded, we must return early as it would create an infinite
+                // embed-update loop.
+                if server.log_channel == update.channel_id && update.embeds != None {
+                    return Ok(());
+                }
+                if let Some(msg) = message {
+                    let mut map = HashMap::new();
+                    map.insert("message_id".to_string(), update.id.to_string());
+                    map.insert("channel_id".to_string(), update.channel_id.to_string());
+                    if let Some(ref author) = update.author {
+                        author.clone().merge_into_map_prefix(&mut map, "author_");
+                    } else {
+                        User { id: UserId(0), name: "None".to_string(), discriminator: 0, avatar: None, bot: false }.merge_into_map_prefix(&mut map, "author_");
+                    }
+                    let diffs = msg.diff(&update);
+                    for diff in diffs {
+                        let fmt = match diff {
+                            MessageUpdateDiff::Kind(..) => server.config.message_update_kind_msg.as_ref(),
+                            MessageUpdateDiff::Content(..) => server.config.message_update_content_msg.as_ref(),
+                            MessageUpdateDiff::Nonce(..) => server.config.message_update_nonce_msg.as_ref(),
+                            MessageUpdateDiff::Tts(..) => server.config.message_update_tts_msg.as_ref(),
+                            MessageUpdateDiff::Pinned => server.config.message_update_pinned_msg.as_ref(),
+                            MessageUpdateDiff::UnPinned => server.config.message_update_unpinned_msg.as_ref(),
+                            MessageUpdateDiff::EditedTimestamp(..) => server.config.message_update_edited_time_msg.as_ref(),
+                            MessageUpdateDiff::MentionEveryone(..) => server.config.message_update_mention_everyone_msg.as_ref(),
+                            MessageUpdateDiff::MentionAdded(..) => server.config.message_update_mention_added_msg.as_ref(),
+                            MessageUpdateDiff::MentionRemoved(..) => server.config.message_update_mention_removed_msg.as_ref(),
+                            MessageUpdateDiff::MentionRoleAdded(..) => server.config.message_update_mention_role_added_msg.as_ref(),
+                            MessageUpdateDiff::MentionRoleRemoved(..) => server.config.message_update_mention_role_removed_msg.as_ref(),
+                            MessageUpdateDiff::AttachmentAdded(..) => server.config.message_update_attachment_added_msg.as_ref(),
+                            MessageUpdateDiff::AttachmentRemoved(..) => server.config.message_update_attachment_removed_msg.as_ref(),
+                            MessageUpdateDiff::EmbedsAdded(..) => server.config.message_update_embeds_added_msg.as_ref(),
+                            MessageUpdateDiff::EmbedsRemoved(..) => server.config.message_update_embeds_removed_msg.as_ref(),
+                        };
+                        let mut map = map.clone();
+                        diff.merge_into_map(&mut map);
+                        self.log_fmt(&server, fmt, &map)?;
+                    }
+                } else {
+                    let map = update.into_map();
+                    self.log_fmt(&server, server.config.message_update_uncached_msg.as_ref(), &map)?;
                 }
             },
             // Event::MessageAck

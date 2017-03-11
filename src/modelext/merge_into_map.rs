@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use discord::model::{
     Member,
     User,
+    UserId,
     Message,
     MessageType,
     MessageDelete,
@@ -10,8 +11,11 @@ use discord::model::{
     PublicChannel,
     Reaction,
     ReactionEmoji,
+    MessageUpdate,
+    Attachment
 };
 use discord::model::permissions::{self, Permissions};
+use modelext::diff::MessageUpdateDiff;
 
 pub trait MergeIntoMap {
     fn merge_into_map(self, map: &mut HashMap<String, String>);
@@ -192,6 +196,111 @@ impl MergeIntoMap for ReactionEmoji {
                 map.insert("name".to_string(), name);
                 map.insert("id".to_string(), id.to_string());
             }
+        }
+    }
+}
+
+impl MergeIntoMap for MessageUpdate {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        map.insert("debug".to_string(), format!("{:?}", self));
+        let MessageUpdate { id, channel_id, kind, content, nonce, tts, pinned,
+                timestamp: time, edited_timestamp: edited_time, author,
+                mention_everyone, mentions, mention_roles, attachments,
+                embeds } = self;
+        map.insert("id".to_string(), id.to_string());
+        map.insert("channel_id".to_string(), channel_id.to_string());
+        map.insert("kind".to_string(), kind.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
+        map.insert("content".to_string(), content.unwrap_or("None".to_string()));
+        map.insert("nonce".to_string(), nonce.unwrap_or("None".to_string()));
+        map.insert("tts".to_string(), tts.map(|t| t.to_string()).unwrap_or("None".to_string()));
+        map.insert("pinned".to_string(), pinned.map(|t| t.to_string()).unwrap_or("None".to_string()));
+        map.insert("time".to_string(), time.unwrap_or("None".to_string()));
+        map.insert("edited_time".to_string(), edited_time.unwrap_or("None".to_string()));
+        if let Some(author) = author {
+            author.merge_into_map_prefix(map, "author_");
+        } else {
+            User { id: UserId(0), name: "None".to_string(), discriminator: 0, avatar: None, bot: false }.merge_into_map_prefix(map, "author_");
+        }
+        map.insert("mention_everyone".to_string(), mention_everyone.map(|t| t.to_string()).unwrap_or("None".to_string()));
+        // TODO: find better solution to provide lists
+        map.insert("mentions".to_string(), mentions.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
+        // TODO: find better solution to provide lists
+        map.insert("mention_roles".to_string(), mention_roles.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
+        // TODO: find better solution to provide lists
+        map.insert("attachments".to_string(), attachments.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
+        // TODO: find better solution to provide lists
+        map.insert("embeds".to_string(), embeds.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
+    }
+}
+
+impl MergeIntoMap for Attachment {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        let Attachment { id, filename, url, proxy_url, size, dimensions } = self;
+        map.insert("id".to_string(), id);
+        map.insert("filename".to_string(), filename);
+        map.insert("url".to_string(), url);
+        map.insert("proxy_url".to_string(), proxy_url);
+        map.insert("size".to_string(), size.to_string());
+        let (width, height) = dimensions.map(|(w, h)| (w.to_string(), h.to_string()))
+            .unwrap_or(("None".to_string(), "None".to_string()));
+        map.insert("width".to_string(), width);
+        map.insert("height".to_string(), height);
+    }
+}
+
+impl MergeIntoMap for MessageUpdateDiff {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        match self {
+            MessageUpdateDiff::Kind(from, to) => {
+                map.insert("from".to_string(), format!("{:?}", from));
+                map.insert("to".to_string(), format!("{:?}", to));
+            },
+            MessageUpdateDiff::Content(from, to) => {
+                map.insert("from".to_string(), from.unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.unwrap_or("None".to_string()));
+            },
+            MessageUpdateDiff::Nonce(from, to) => {
+                map.insert("from".to_string(), from.unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.unwrap_or("None".to_string()));
+            },
+            MessageUpdateDiff::Tts(from, to) => {
+                map.insert("from".to_string(), from.to_string());
+                map.insert("to".to_string(), to.to_string());
+            },
+            MessageUpdateDiff::Pinned => {},
+            MessageUpdateDiff::UnPinned => {},
+            MessageUpdateDiff::EditedTimestamp(from, to) => {
+                map.insert("from".to_string(), from.unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.unwrap_or("None".to_string()));
+            },
+            MessageUpdateDiff::MentionEveryone(from, to) => {
+                map.insert("from".to_string(), from.to_string());
+                map.insert("to".to_string(), to.to_string());
+            },
+            MessageUpdateDiff::MentionAdded(user) => {
+                user.merge_into_map(map);
+            },
+            MessageUpdateDiff::MentionRemoved(user) => {
+                user.merge_into_map(map);
+            },
+            MessageUpdateDiff::MentionRoleAdded(role_id) => {
+                map.insert("id".to_string(), role_id.to_string());
+            },
+            MessageUpdateDiff::MentionRoleRemoved(role_id) => {
+                map.insert("id".to_string(), role_id.to_string());
+            },
+            MessageUpdateDiff::AttachmentAdded(attachment) => {
+                attachment.merge_into_map(map);
+            },
+            MessageUpdateDiff::AttachmentRemoved(attachment) => {
+                attachment.merge_into_map(map);
+            },
+            MessageUpdateDiff::EmbedsAdded(value) => {
+                map.insert("value".to_string(), value.to_string());
+            },
+            MessageUpdateDiff::EmbedsRemoved(value) => {
+                map.insert("value".to_string(), value.to_string());
+            },
         }
     }
 }
