@@ -256,8 +256,8 @@ impl MergeIntoMap for MessageUpdateDiff {
                 map.insert("to".to_string(), format!("{:?}", to));
             },
             MessageUpdateDiff::Content(from, to) => {
-                map.insert("from".to_string(), from.unwrap_or("None".to_string()));
-                map.insert("to".to_string(), to.unwrap_or("None".to_string()));
+                map.insert("from".to_string(), from);
+                map.insert("to".to_string(), to);
             },
             MessageUpdateDiff::Nonce(from, to) => {
                 map.insert("from".to_string(), from.unwrap_or("None".to_string()));
@@ -271,7 +271,7 @@ impl MergeIntoMap for MessageUpdateDiff {
             MessageUpdateDiff::UnPinned => {},
             MessageUpdateDiff::EditedTimestamp(from, to) => {
                 map.insert("from".to_string(), from.unwrap_or("None".to_string()));
-                map.insert("to".to_string(), to.unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to);
             },
             MessageUpdateDiff::MentionEveryone(from, to) => {
                 map.insert("from".to_string(), from.to_string());
