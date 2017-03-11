@@ -151,6 +151,7 @@ impl Bot {
                 }
                 if let Some(msg) = message {
                     let mut map = HashMap::new();
+                    msg.author.clone().merge_into_map_prefix(&mut map, "cached_author_");
                     map.insert("message_id".to_string(), update.id.to_string());
                     map.insert("channel_id".to_string(), update.channel_id.to_string());
                     if let Some(ref author) = update.author {
