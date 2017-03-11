@@ -67,10 +67,14 @@ impl MergeIntoMap for Message {
             mention_everyone, mentions, mention_roles, reactions, attachments,
             embeds 
         } = self;
-        assert_eq!(kind, MessageType::Regular);
+        assert!(kind == MessageType::Regular || kind == MessageType::MessagePinned);
         map.insert("id".to_string(), id.to_string());
         map.insert("channel_id".to_string(), channel_id.to_string());
-        map.insert("content".to_string(), content.to_string());
+        match kind {
+            MessageType::Regular => map.insert("content".to_string(), content.to_string()),
+            MessageType::MessagePinned => map.insert("content".to_string(), "<message pinned>".to_string()),
+            _ => unreachable!()
+        };
         map.insert("nonce".to_string(), nonce.unwrap_or("None".to_string()));
         map.insert("tts".to_string(), tts.to_string());
         map.insert("time".to_string(), time.to_string());
