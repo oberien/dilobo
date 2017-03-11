@@ -16,7 +16,7 @@ use discord::model::{
 };
 
 use config::Config;
-use merge_into_map::MergeIntoMap;
+use modelext::MergeIntoMap;
 use self::server::Server;
 
 pub struct Bot {

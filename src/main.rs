@@ -2,9 +2,10 @@ extern crate toml;
 extern crate rustc_serialize;
 extern crate discord;
 extern crate strfmt;
+extern crate serde_json;
 
 mod expiring_map;
-mod merge_into_map;
+mod modelext;
 mod config;
 mod bot;
 
