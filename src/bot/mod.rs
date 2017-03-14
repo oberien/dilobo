@@ -125,16 +125,16 @@ impl Bot {
             .expect(&format!("could not find server for server_id {}", server_id))
     }
 
-    fn log_fmt(&self, server: &Server, fmt: Option<&String>, map: &HashMap<String, String>) -> Result<()> {
+    fn log_fmt(&self, log_channel: ChannelId, fmt: Option<&String>, map: &HashMap<String, String>) -> Result<()> {
         if let Some(fmt) = fmt {
             // TODO: user error_chain instead of unwrap
             let msg = strfmt(&fmt, map).unwrap();
-            self.log(server, &msg)?;
+            self.log(log_channel, &msg)?;
         }
         Ok(())
     }
 
-    fn log(&self, server: &Server, msg: &str) -> Result<()> {
-        self.dis.send_message(server.log_channel, msg, "", false).map(|_| ())
+    fn log(&self, log_channel: ChannelId, msg: &str) -> Result<()> {
+        self.dis.send_message(log_channel, msg, "", false).map(|_| ())
     }
 }

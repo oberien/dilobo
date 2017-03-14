@@ -14,7 +14,7 @@ impl Bot {
         // TODO: Add member to cache
         let server = self.server_by_server(server_id);
         let map = member.into_map();
-        self.log_fmt(&server, server.config.server_member_add_msg.as_ref(), &map)?;
+        self.log_fmt(server.log_channel, server.config.server_member_add_msg.as_ref(), &map)?;
         Ok(())
     }
 
@@ -22,7 +22,7 @@ impl Bot {
         // TODO: calculate diff
         // TODO: update member in cache
         let server = self.server_by_server(update.server_id);
-        self.log(&server, &format!("Member Changed: {:?}", update))?;
+        self.log(server.log_channel, &format!("Member Changed: {:?}", update))?;
         Ok(())
     }
 
@@ -30,7 +30,7 @@ impl Bot {
         // TODO: remove member from cache
         let server = self.server_by_server(server_id);
         let map = user.into_map();
-        self.log_fmt(&server, server.config.server_member_remove_msg.as_ref(), &map)?;
+        self.log_fmt(server.log_channel, server.config.server_member_remove_msg.as_ref(), &map)?;
         Ok(())
     }
 }

@@ -13,7 +13,7 @@ impl Bot {
         // TODO: add role to cache
         let server = self.server_by_server(server_id);
         let map = role.into_map();
-        self.log_fmt(&server, server.config.server_role_create_msg.as_ref(), &map)?;
+        self.log_fmt(server.log_channel, server.config.server_role_create_msg.as_ref(), &map)?;
         Ok(())
     }
 
@@ -22,7 +22,7 @@ impl Bot {
         // TODO: calculate diff
         // TODO: update role in cache
         let server = self.server_by_server(server_id);
-        self.log(&server, &format!("Role Changed: {:?}", role))?;
+        self.log(server.log_channel, &format!("Role Changed: {:?}", role))?;
         Ok(())
     }
 
@@ -30,7 +30,7 @@ impl Bot {
         // TODO: implement function
         // TODO: remove role in cache
         let server = self.server_by_server(server_id);
-        self.log(&server, &format!("Role Deleted: {:?}", role_id))?;
+        self.log(server.log_channel, &format!("Role Deleted: {:?}", role_id))?;
         Ok(())
     }
 }

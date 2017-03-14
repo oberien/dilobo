@@ -27,6 +27,10 @@ impl<K, V> ExpiringMap<K, V> where K: ::std::cmp::Eq + ::std::hash::Hash + Clone
         self.map.get(key)
     }
 
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        self.map.get_mut(key)
+    }
+
     pub fn remove(&mut self, key: &K) -> Option<V> {
         self.map.remove(key)
     }

@@ -36,6 +36,45 @@ pub enum MessageUpdateDiff {
     EmbedsRemoved(Value),
 }
 
+impl MessageUpdateDiff {
+    pub fn apply(&self, message: &mut Message) {
+        match self {
+            &MessageUpdateDiff::Kind(_, new) => message.kind = new,
+            &MessageUpdateDiff::Content(_, ref new) => message.content = new.clone(),
+            &MessageUpdateDiff::Nonce(_, ref new) => message.nonce = new.clone(),
+            &MessageUpdateDiff::Tts(_, new) => message.tts = new,
+            &MessageUpdateDiff::Pinned => message.pinned = true,
+            &MessageUpdateDiff::UnPinned => message.pinned = false,
+            &MessageUpdateDiff::EditedTimestamp(_, ref new) => message.edited_timestamp = Some(new.clone()),
+            &MessageUpdateDiff::MentionEveryone(_, new) => message.mention_everyone = new,
+            &MessageUpdateDiff::MentionAdded(ref user) => message.mentions.push(user.clone()),
+            &MessageUpdateDiff::MentionRemoved(ref user) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                let pos = message.mentions.iter().position(|u| u.id == user.id).unwrap();
+                message.mentions.swap_remove(pos);
+            },
+            &MessageUpdateDiff::MentionRoleAdded(role_id) => message.mention_roles.push(role_id),
+            &MessageUpdateDiff::MentionRoleRemoved(role_id) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                let pos = message.mention_roles.iter().position(|id| *id == role_id).unwrap();
+                message.mention_roles.swap_remove(pos);
+            },
+            &MessageUpdateDiff::AttachmentAdded(ref attachment) => message.attachments.push(attachment.clone()),
+            &MessageUpdateDiff::AttachmentRemoved(ref attachment) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                let pos = message.attachments.iter().position(|a| a.id == attachment.id).unwrap();
+                message.attachments.swap_remove(pos);
+            },
+            &MessageUpdateDiff::EmbedsAdded(ref val) => message.embeds.push(val.clone()),
+            &MessageUpdateDiff::EmbedsRemoved(ref val) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                let pos = message.embeds.iter().position(|v| v == val).unwrap();
+                message.embeds.swap_remove(pos);
+            },
+        }
+    }
+}
+
 impl Diff for Message {
     type Other = MessageUpdate;
     type Output = MessageUpdateDiff;

@@ -13,7 +13,7 @@ impl Bot {
             self.channels.insert(channel.id, channel.server_id);
             let server = self.server_by_channel(channel.id);
             let map = channel.into_map();
-            self.log_fmt(&server, server.config.channel_create_msg.as_ref(), &map)?;
+            self.log_fmt(server.log_channel, server.config.channel_create_msg.as_ref(), &map)?;
         }
         // TODO: Return error if channel is not public once error_chain is in use
         Ok(())
@@ -24,7 +24,7 @@ impl Bot {
         // TODO: update channel in cache
         if let Channel::Public(channel) = channel {
             let server = self.server_by_channel(channel.id);
-            self.log(&server, &format!("Channel Changed: {:?}", channel))?;
+            self.log(server.log_channel, &format!("Channel Changed: {:?}", channel))?;
         }
         // TODO: Return error if channel is not public once error_chain is in use
         Ok(())
@@ -37,7 +37,7 @@ impl Bot {
             {
                 let server = self.server_by_channel(channel.id);
                 let map = channel.into_map();
-                self.log_fmt(&server, server.config.channel_delete_msg.as_ref(), &map)?;
+                self.log_fmt(server.log_channel, server.config.channel_delete_msg.as_ref(), &map)?;
             }
             self.channels.remove(&channel_id);
         }
