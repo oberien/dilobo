@@ -11,12 +11,15 @@ use discord::model::{
     OnlineStatus,
     ServerId,
     ChannelId,
+    LiveServer,
+    PossibleServer,
 };
 
 use config::Config;
 use self::server::Server;
 
 pub struct Bot {
+    config: Config,
     dis: Discord,
     con: Connection,
     user: CurrentUser,
@@ -25,73 +28,77 @@ pub struct Bot {
 }
 
 impl Bot {
-    pub fn new(config: &Config) -> Bot {
+    pub fn new(config: Config) -> Bot {
         let discord = Discord::from_bot_token(&config.bot.as_ref().unwrap().token).unwrap();
-        let (con, ready) = discord.connect().unwrap();
-        println!("Logged in as {:?}", ready);
+        let (con, mut ready) = discord.connect().unwrap();
+        println!("Logged in as {:?}", ready.user.username);
         println!();
-        Bot {
+        let mut bot = Bot {
+            config: config,
             dis: discord,
             con: con,
             user: ready.user,
             servers: HashMap::new(),
             channels: HashMap::new(),
+        };
+        bot.con.set_presence(None, OnlineStatus::Online, false);
+        for server in ready.servers.drain(..) {
+            match server {
+                PossibleServer::Online(server) => bot.add_server(server),
+                _ => {}
+            }
         }
+        bot
     }
 
-    pub fn init(&mut self, mut config: Config) -> Result<()> {
-        self.con.set_presence(None, OnlineStatus::Online, false);
-        let mut servers = self.dis.get_servers().unwrap();
-        for server in servers.drain(..) {
-            // check if server is configured
-            let index = config.server.iter().enumerate().find(|&(_, ref s)| {
-                match s.server_id {
-                    Some(id) => match s.server_name {
-                        Some(ref name) => server.id == ServerId(id) && server.name == *name,
-                        None => server.id == ServerId(id)
-                    },
-                    None => match s.server_name {
-                        Some(ref name) => server.name == *name,
-                        None => panic!("No server_id or server_name given to identify the server.")
-                    }
-                }
-            }).map(|(i, _)| i);
-            // not in server config
-            if let None = index {
-                println!("The bot is member of unconfigured server: {:?}", server);
-                continue;
-            }
-            let server_config = config.server.swap_remove(index.unwrap());
-            let mut log_channel = None;
-
-            let channels = self.dis.get_server_channels(server.id).unwrap();
-            for channel in channels {
-                self.channels.insert(channel.id, server.id);
-                // check if this channel is the log channel
-                let is_log_channel = match server_config.log_channel_id {
-                    Some(id) => match server_config.log_channel_name {
-                        Some(ref name) => channel.id == ChannelId(id) && channel.name == *name,
-                        None => channel.id == ChannelId(id)
-                    },
-                    None => match server_config.log_channel_name {
-                        Some(ref name) => channel.name == *name,
-                        None => panic!("No log_channel_id or log_channel_name given to identify the channel.")
-                    }
-                };
-                if is_log_channel {
-                    log_channel = Some(channel.id);
+    fn add_server(&mut self, server: LiveServer) {
+        // check if server is configured
+        let index = self.config.server.iter().position(|s| {
+            match s.server_id {
+                Some(id) => match s.server_name {
+                    Some(ref name) => server.id == ServerId(id) && server.name == *name,
+                    None => server.id == ServerId(id)
+                },
+                None => match s.server_name {
+                    Some(ref name) => server.name == *name,
+                    None => panic!("No server_id or server_name given to identify the server.")
                 }
             }
-            if log_channel == None {
-                panic!("Couldn't find log channel for server.");
-            }
-            let log_channel = log_channel.unwrap();
-            let server = Server::new(server_config, server, log_channel);
-            println!("Successfully logging for server {:?}", server);
-            println!();
-            self.servers.insert(server.server.id, server);
+        });
+        // not in server config
+        if let None = index {
+            println!("The bot is member of unconfigured server: {:?}", server);
+            return;
         }
-        Ok(())
+        let server_config = self.config.server.swap_remove(index.unwrap());
+        let mut log_channel = None;
+
+        for channel in server.channels.iter() {
+            self.channels.insert(channel.id, server.id);
+            // check if this channel is the log channel
+            let is_log_channel = match server_config.log_channel_id {
+                Some(id) => match server_config.log_channel_name {
+                    Some(ref name) => channel.id == ChannelId(id) && channel.name == *name,
+                    None => channel.id == ChannelId(id)
+                },
+                None => match server_config.log_channel_name {
+                    Some(ref name) => channel.name == *name,
+                    None => panic!("No log_channel_id or log_channel_name given to identify the channel.")
+                }
+            };
+            if is_log_channel {
+                log_channel = Some(channel.id);
+            }
+        }
+        if log_channel == None {
+            panic!("Couldn't find log channel for server.");
+        }
+        let log_channel = log_channel.unwrap();
+        let server = Server::new(server_config, server, log_channel);
+        println!("Successfully logging for server {:?}", server.name);
+        println!();
+        self.servers.insert(server.id, server);
+
     }
 
     pub fn run(&mut self) -> Result<()> {

@@ -10,7 +10,7 @@ mod reaction;
 use bot::Bot;
 
 use discord::Result;
-use discord::model::Event;
+use discord::model::{Event, PossibleServer};
 
 impl Bot {
     pub fn handle_event(&mut self, evt: Event) -> Result<()> {
@@ -45,8 +45,15 @@ impl Bot {
             Event::MessageDeleteBulk(del) => {
                 self.handle_message_delete_bulk(del)?;
             },
-            // Event::ServerCreate
+            Event::ServerCreate(server) => {
+                match server {
+                    PossibleServer::Online(server) => self.add_server(server),
+                    _ => {}
+                }
+            },
+            // TODO: update server
             // Event::ServerUpdate
+            // TODO: handle offline servers
             // Event::ServerDelete
             Event::ServerMemberAdd(server_id, member) => {
                 self.handle_server_member_add(server_id, member)?;

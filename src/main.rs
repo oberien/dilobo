@@ -29,11 +29,7 @@ fn main() {
         config.save("Config.toml");
     }
     loop {
-        let mut bot = Bot::new(&config);
-        if let Err(err) = bot.init(config.clone()) {
-            println!("Error during bot.init: {:?}", err);
-            continue;
-        }
+        let mut bot = Bot::new(config.clone());
         if let Err(err) = bot.run() {
             println!("Error during bot.run: {:?}", err);
         }
