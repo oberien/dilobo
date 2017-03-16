@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use discord::model::{
     Message,
@@ -9,6 +9,8 @@ use discord::model::{
     Attachment,
     Member,
     ServerMemberUpdate,
+    EmojiId,
+    Emoji,
 };
 use serde_json::Value;
 
@@ -198,6 +200,59 @@ impl Diff for Member {
         }
         if self.nick != other.nick {
             res.push(MemberUpdateDiff::NickChanged(self.nick.clone(), other.nick.clone()));
+        }
+        res
+    }
+}
+
+pub enum EmojisUpdateDiff {
+    EmojiAdded(Emoji),
+    EmojiRemoved(Emoji),
+    NameChanged(EmojiId, String, String),
+}
+
+impl EmojisUpdateDiff {
+    pub fn apply(&self, emojis: &mut HashMap<EmojiId, Emoji>) {
+        match self {
+            &EmojisUpdateDiff::EmojiAdded(ref emoji) => {
+                // TODO: don't panic but return Result once error_chain is in place
+                assert!(emojis.insert(emoji.id, emoji.clone()).is_none());
+            },
+            &EmojisUpdateDiff::EmojiRemoved(ref emoji) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                emojis.remove(&emoji.id).unwrap();
+            },
+            &EmojisUpdateDiff::NameChanged(id, _, ref new) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                emojis.get_mut(&id).unwrap().name = new.clone();
+            },
+        }
+    }
+}
+
+impl Diff for HashMap<EmojiId, Emoji> {
+    type Other = Vec<Emoji>;
+    type Output = EmojisUpdateDiff;
+
+    fn diff(&self, others: &Self::Other) -> Vec<Self::Output> {
+        let mut res = Vec::new();
+        for other in others {
+            let old = self.get(&other.id);
+            if let Some(emoji) = old {
+                if emoji.name != other.name {
+                    res.push(EmojisUpdateDiff::NameChanged(emoji.id, emoji.name.clone(), other.name.clone()));
+                }
+                // TODO: handle roles attribute
+            } else {
+                res.push(EmojisUpdateDiff::EmojiAdded(other.clone()));
+            }
+        }
+        let selfids: HashSet<_> = self.keys().cloned().collect();
+        let otherids: HashSet<_> = others.iter().map(|e| e.id).collect();
+        for removed_id in selfids.difference(&otherids) {
+            // TODO: don't unwrap but return Result once error_chain is in place
+            let removed = self.get(removed_id).unwrap();
+            res.push(EmojisUpdateDiff::EmojiRemoved(removed.clone()));
         }
         res
     }

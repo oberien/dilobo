@@ -80,8 +80,9 @@ pub struct ServerConfig {
     //pub server_role_delete_msg: Option<String>,
     pub server_ban_add_msg: Option<String>,
     pub server_ban_remove_msg: Option<String>,
-    // TODO: Differenciate between updates
-    //pub server_emojis_update_msg: Option<String>,
+    pub server_emoji_add_msg: Option<String>,
+    pub server_emoji_remove_msg: Option<String>,
+    pub server_emoji_name_change_msg: Option<String>,
     pub channel_create_msg: Option<String>,
     // TODO: Differenciate between updates
     //pub channel_update_msg: Option<String>,

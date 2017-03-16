@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use bot::Bot;
+use modelext::{MergeIntoMap, Diff, EmojisUpdateDiff};
 
 use discord::Result;
 use discord::model::{
@@ -7,10 +10,36 @@ use discord::model::{
 };
 
 impl Bot {
-    pub fn handle_server_emojis_update(&self, server_id: ServerId, emojis: Vec<Emoji>) -> Result<()> {
-        // TODO: implement function
+    pub fn handle_server_emojis_update(&mut self, server_id: ServerId, update: Vec<Emoji>) -> Result<()> {
+        let mut diffs;
+        {
+            let server = self.server_by_server_mut(server_id);
+            let mut emojis = &mut server.emojis;
+            diffs = emojis.diff(&update);
+            for diff in diffs.iter() {
+                diff.apply(&mut emojis);
+            }
+        }
         let server = self.server_by_server(server_id);
-        self.log(server.log_channel, &format!("Emojis Changed: {:?}", emojis))?;
+        for diff in diffs.drain(..) {
+            match diff {
+                EmojisUpdateDiff::EmojiAdded(emoji) => {
+                    let map = emoji.into_map_prefix("emoji_");
+                    self.log_fmt(server.log_channel, server.config.server_emoji_add_msg.as_ref(), &map)?;
+                },
+                EmojisUpdateDiff::EmojiRemoved(emoji) => {
+                    let map = emoji.into_map_prefix("emoji_");
+                    self.log_fmt(server.log_channel, server.config.server_emoji_remove_msg.as_ref(), &map)?;
+                },
+                EmojisUpdateDiff::NameChanged(id, from, to) => {
+                    let mut map = HashMap::new();
+                    map.insert("emoji_id".to_string(), id.to_string());
+                    map.insert("from".to_string(), from);
+                    map.insert("to".to_string(), to);
+                    self.log_fmt(server.log_channel, server.config.server_emoji_name_change_msg.as_ref(), &map)?;
+                }
+            }
+        }
         Ok(())
     }
 }

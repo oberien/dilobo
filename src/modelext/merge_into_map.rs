@@ -11,6 +11,7 @@ use discord::model::{
     PublicChannel,
     Reaction,
     ReactionEmoji,
+    Emoji,
     MessageUpdate,
     Attachment
 };
@@ -202,6 +203,17 @@ impl MergeIntoMap for ReactionEmoji {
                 map.insert("id".to_string(), id.to_string());
             }
         }
+    }
+}
+
+impl MergeIntoMap for Emoji {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+        map.insert("id".to_string(), self.id.to_string());
+        map.insert("name".to_string(), self.name);
+        map.insert("managed".to_string(), self.managed.to_string());
+        map.insert("require_colons".to_string(), self.require_colons.to_string());
+        // TODO: find better solution to provide lists
+        map.insert("roles".to_string(), format!("{:?}", self.roles));
     }
 }
 
