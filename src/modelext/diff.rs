@@ -7,6 +7,8 @@ use discord::model::{
     User,
     RoleId,
     Attachment,
+    Member,
+    ServerMemberUpdate,
 };
 use serde_json::Value;
 
@@ -155,6 +157,47 @@ impl Diff for Message {
             for removed in self.embeds.iter().filter(|&e| !otherembeds.contains(e)) {
                 res.push(MessageUpdateDiff::EmbedsRemoved(removed.clone()));
             }
+        }
+        res
+    }
+}
+
+pub enum MemberUpdateDiff {
+    RoleAdded(RoleId),
+    RoleRemoved(RoleId),
+    NickChanged(Option<String>, Option<String>),
+}
+
+impl MemberUpdateDiff {
+    pub fn apply(&self, member: &mut Member) {
+        match self {
+            &MemberUpdateDiff::RoleAdded(id) => member.roles.push(id),
+            &MemberUpdateDiff::RoleRemoved(id) => {
+                // TODO: don't unwrap but return Result once error_chain is in place
+                let pos = member.roles.iter().position(|rid| *rid == id).unwrap();
+                member.roles.swap_remove(pos);
+            },
+            &MemberUpdateDiff::NickChanged(_, ref to) => member.nick = to.clone(),
+        }
+    }
+}
+
+impl Diff for Member {
+    type Other = ServerMemberUpdate;
+    type Output = MemberUpdateDiff;
+
+    fn diff(&self, other: &Self::Other) -> Vec<Self::Output> {
+        let mut res = Vec::new();
+        let selfroles: HashSet<_> = self.roles.iter().cloned().collect();
+        let otherroles: HashSet<_> = other.roles.iter().cloned().collect();
+        for &added in otherroles.difference(&selfroles) {
+            res.push(MemberUpdateDiff::RoleAdded(added));
+        }
+        for &removed in selfroles.difference(&otherroles) {
+            res.push(MemberUpdateDiff::RoleRemoved(removed));
+        }
+        if self.nick != other.nick {
+            res.push(MemberUpdateDiff::NickChanged(self.nick.clone(), other.nick.clone()));
         }
         res
     }

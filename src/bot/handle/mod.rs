@@ -28,6 +28,7 @@ impl Bot {
             // Event::ChannelRecipientAdd
             // Event::ChannelRecipientRemove
             // Event::TypingStart
+            // TODO: Analyse PresenceUpdates as they contain user changes
             // Event::PresenceUpdate
             // Event::PresencesReplace
             // Event::RelationshipAdd

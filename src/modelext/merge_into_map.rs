@@ -31,6 +31,11 @@ pub trait MergeIntoMap {
         self.merge_into_map(&mut map);
         map
     }
+    fn into_map_prefix(self, prefix: &str) -> HashMap<String, String> where Self: ::std::marker::Sized {
+        let mut map = HashMap::new();
+        self.merge_into_map_prefix(&mut map, prefix);
+        map
+    }
 }
 
 impl MergeIntoMap for User {
