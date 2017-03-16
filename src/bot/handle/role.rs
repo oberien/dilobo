@@ -13,7 +13,8 @@ impl Bot {
         // TODO: add role to cache
         let server = self.server_by_server(server_id);
         let map = role.into_map();
-        self.log_fmt(server.log_channel, server.config.server_role_create_msg.as_ref(), &map)?;
+        let template = server.config.as_ref().and_then(|c| c.server_role_create_msg.as_ref());
+        self.log_fmt(server.log_channel, template, &map)?;
         Ok(())
     }
 

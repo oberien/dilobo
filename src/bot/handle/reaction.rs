@@ -14,9 +14,11 @@ impl Bot {
         // TODO: improve infos in map with channel and user
         if let Some(msg) = message {
             msg.clone().merge_into_map_prefix(&mut map, "message_");
-            self.log_fmt(server.log_channel, server.config.reaction_add_cached_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.reaction_add_cached_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         } else {
-            self.log_fmt(server.log_channel, server.config.reaction_add_uncached_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.reaction_add_uncached_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         }
         Ok(())
     }
@@ -28,9 +30,11 @@ impl Bot {
         // TODO: improve infos in map with channel and user
         if let Some(msg) = message {
             msg.clone().merge_into_map_prefix(&mut map, "message_");
-            self.log_fmt(server.log_channel, server.config.reaction_remove_cached_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.reaction_remove_cached_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         } else {
-            self.log_fmt(server.log_channel, server.config.reaction_remove_uncached_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.reaction_remove_uncached_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         }
         Ok(())
     }

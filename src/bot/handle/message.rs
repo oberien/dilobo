@@ -22,9 +22,10 @@ impl Bot {
         }
         let server = self.server_by_channel(msg.channel_id);
         // ignore new messages in log channel which we have created
-        if msg.channel_id != server.log_channel || msg.author.id != self.user.id {
+        if server.log_channel.is_some() && msg.channel_id != server.log_channel.unwrap() || msg.author.id != self.user.id {
             let map = msg.into_map();
-            self.log_fmt(server.log_channel, server.config.message_create_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.message_create_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         }
         Ok(())
     }
@@ -40,12 +41,13 @@ impl Bot {
             // If the message's channel is the log_channel and it has something
             // embedded, we must return early as it would create an infinite
             // embed-update loop.
-            if log_channel == update.channel_id && update.embeds != None {
+            if log_channel.is_some() && log_channel.unwrap() == update.channel_id && update.embeds != None {
                 return Ok(());
             }
             if let None = message {
                 let map = update.into_map();
-                self.log_fmt(log_channel, server.config.message_update_uncached_msg.as_ref(), &map)?;
+                let template = server.config.as_ref().and_then(|c| c.message_update_uncached_msg.as_ref());
+                self.log_fmt(log_channel, template, &map)?;
                 return Ok(());
             }
             let msg = message.unwrap();
@@ -69,22 +71,22 @@ impl Bot {
             }
             let server = self.server_by_channel(update.channel_id);
             let fmt = match diff {
-                MessageUpdateDiff::Kind(..) => server.config.message_update_kind_msg.as_ref(),
-                MessageUpdateDiff::Content(..) => server.config.message_update_content_msg.as_ref(),
-                MessageUpdateDiff::Nonce(..) => server.config.message_update_nonce_msg.as_ref(),
-                MessageUpdateDiff::Tts(..) => server.config.message_update_tts_msg.as_ref(),
-                MessageUpdateDiff::Pinned => server.config.message_update_pinned_msg.as_ref(),
-                MessageUpdateDiff::UnPinned => server.config.message_update_unpinned_msg.as_ref(),
-                MessageUpdateDiff::EditedTimestamp(..) => server.config.message_update_edited_time_msg.as_ref(),
-                MessageUpdateDiff::MentionEveryone(..) => server.config.message_update_mention_everyone_msg.as_ref(),
-                MessageUpdateDiff::MentionAdded(..) => server.config.message_update_mention_added_msg.as_ref(),
-                MessageUpdateDiff::MentionRemoved(..) => server.config.message_update_mention_removed_msg.as_ref(),
-                MessageUpdateDiff::MentionRoleAdded(..) => server.config.message_update_mention_role_added_msg.as_ref(),
-                MessageUpdateDiff::MentionRoleRemoved(..) => server.config.message_update_mention_role_removed_msg.as_ref(),
-                MessageUpdateDiff::AttachmentAdded(..) => server.config.message_update_attachment_added_msg.as_ref(),
-                MessageUpdateDiff::AttachmentRemoved(..) => server.config.message_update_attachment_removed_msg.as_ref(),
-                MessageUpdateDiff::EmbedsAdded(..) => server.config.message_update_embeds_added_msg.as_ref(),
-                MessageUpdateDiff::EmbedsRemoved(..) => server.config.message_update_embeds_removed_msg.as_ref(),
+                MessageUpdateDiff::Kind(..) => server.config.as_ref().and_then(|c| c.message_update_kind_msg.as_ref()),
+                MessageUpdateDiff::Content(..) => server.config.as_ref().and_then(|c| c.message_update_content_msg.as_ref()),
+                MessageUpdateDiff::Nonce(..) => server.config.as_ref().and_then(|c| c.message_update_nonce_msg.as_ref()),
+                MessageUpdateDiff::Tts(..) => server.config.as_ref().and_then(|c| c.message_update_tts_msg.as_ref()),
+                MessageUpdateDiff::Pinned => server.config.as_ref().and_then(|c| c.message_update_pinned_msg.as_ref()),
+                MessageUpdateDiff::UnPinned => server.config.as_ref().and_then(|c| c.message_update_unpinned_msg.as_ref()),
+                MessageUpdateDiff::EditedTimestamp(..) => server.config.as_ref().and_then(|c| c.message_update_edited_time_msg.as_ref()),
+                MessageUpdateDiff::MentionEveryone(..) => server.config.as_ref().and_then(|c| c.message_update_mention_everyone_msg.as_ref()),
+                MessageUpdateDiff::MentionAdded(..) => server.config.as_ref().and_then(|c| c.message_update_mention_added_msg.as_ref()),
+                MessageUpdateDiff::MentionRemoved(..) => server.config.as_ref().and_then(|c| c.message_update_mention_removed_msg.as_ref()),
+                MessageUpdateDiff::MentionRoleAdded(..) => server.config.as_ref().and_then(|c| c.message_update_mention_role_added_msg.as_ref()),
+                MessageUpdateDiff::MentionRoleRemoved(..) => server.config.as_ref().and_then(|c| c.message_update_mention_role_removed_msg.as_ref()),
+                MessageUpdateDiff::AttachmentAdded(..) => server.config.as_ref().and_then(|c| c.message_update_attachment_added_msg.as_ref()),
+                MessageUpdateDiff::AttachmentRemoved(..) => server.config.as_ref().and_then(|c| c.message_update_attachment_removed_msg.as_ref()),
+                MessageUpdateDiff::EmbedsAdded(..) => server.config.as_ref().and_then(|c| c.message_update_embeds_added_msg.as_ref()),
+                MessageUpdateDiff::EmbedsRemoved(..) => server.config.as_ref().and_then(|c| c.message_update_embeds_removed_msg.as_ref()),
             };
             let mut map = map.clone();
             diff.merge_into_map(&mut map);
@@ -102,10 +104,12 @@ impl Bot {
         let server = self.server_by_channel(del.channel_id);
         if let Some(msg) = message {
             let map = msg.clone().into_map();
-            self.log_fmt(server.log_channel, server.config.message_delete_cached_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.message_delete_cached_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         } else {
             let map = del.into_map();
-            self.log_fmt(server.log_channel, server.config.message_delete_uncached_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.message_delete_uncached_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         }
         Ok(())
     }
@@ -116,7 +120,8 @@ impl Bot {
             let mut map = HashMap::new();
             map.insert("channel_id".to_string(), del.channel_id.to_string());
             map.insert("count".to_string(), del.ids.len().to_string());
-            self.log_fmt(server.log_channel, server.config.message_delete_bulk_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.message_delete_bulk_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         }
         let mut text = String::new();
         for message_id in del.ids {
@@ -128,15 +133,15 @@ impl Bot {
             let server = self.server_by_channel(del.channel_id);
             let line = match cached {
                 // TODO: use error_chain instead of unwrap
-                Some(msg) => server.config.message_delete_cached_msg
-                    .as_ref().map(|fmt| strfmt(fmt, &msg.into_map()).unwrap()),
+                Some(msg) => server.config.as_ref().and_then(|c| c.message_delete_cached_msg.as_ref())
+                    .map(|fmt| strfmt(fmt, &msg.into_map()).unwrap()),
                 None => {
                     let del = MessageDelete {
                         channel_id: del.channel_id,
                         message_id: message_id,
                     };
-                    server.config.message_delete_uncached_msg
-                        .as_ref().map(|fmt| strfmt(fmt, &del.into_map()).unwrap())
+                    server.config.as_ref().and_then(|c| c.message_delete_uncached_msg.as_ref())
+                        .map(|fmt| strfmt(fmt, &del.into_map()).unwrap())
                 }
             };
             if let Some(line) = line {

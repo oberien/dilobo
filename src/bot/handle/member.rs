@@ -17,7 +17,8 @@ impl Bot {
         }
         let server = self.server_by_server(server_id);
         let map = member.into_map();
-        self.log_fmt(server.log_channel, server.config.server_member_add_msg.as_ref(), &map)?;
+        let template = server.config.as_ref().and_then(|c| c.server_member_add_msg.as_ref());
+        self.log_fmt(server.log_channel, template, &map)?;
         Ok(())
     }
 
@@ -36,7 +37,8 @@ impl Bot {
         let server = self.server_by_server(update.server_id);
         if diffs.is_empty() {
             let map = member.into_map_prefix("member_");
-            self.log_fmt(server.log_channel, server.config.server_member_no_change_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.server_member_no_change_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
             return Ok(());
         }
         for diff in diffs.drain(..) {
@@ -45,13 +47,15 @@ impl Bot {
                     let role = server.roles.get(&role_id).unwrap().clone();
                     let mut map = role.into_map_prefix("role_");
                     member.clone().merge_into_map_prefix(&mut map, "member_");
-                    self.log_fmt(server.log_channel, server.config.server_member_role_add_msg.as_ref(), &map)?;
+                    let template = server.config.as_ref().and_then(|c| c.server_member_role_add_msg.as_ref());
+                    self.log_fmt(server.log_channel, template, &map)?;
                 },
                 MemberUpdateDiff::RoleRemoved(role_id) => {
                     let role = server.roles.get(&role_id).unwrap().clone();
                     let mut map = role.into_map_prefix("role_");
                     member.clone().merge_into_map_prefix(&mut map, "member_");
-                    self.log_fmt(server.log_channel, server.config.server_member_role_remove_msg.as_ref(), &map)?;
+                    let template = server.config.as_ref().and_then(|c| c.server_member_role_remove_msg.as_ref());
+                    self.log_fmt(server.log_channel, template, &map)?;
                 },
                 MemberUpdateDiff::NickChanged(from, to) => {
                     let mut map = member.clone().into_map_prefix("member_");
@@ -63,7 +67,8 @@ impl Bot {
                         Some(s) => map.insert("to".to_string(), s),
                         None => map.insert("to".to_string(), "None".to_string())
                     };
-                    self.log_fmt(server.log_channel, server.config.server_member_nick_change_msg.as_ref(), &map)?;
+                    let template = server.config.as_ref().and_then(|c| c.server_member_nick_change_msg.as_ref());
+                    self.log_fmt(server.log_channel, template, &map)?;
                 },
             }
         }
@@ -77,7 +82,8 @@ impl Bot {
         }
         let server = self.server_by_server(server_id);
         let map = user.into_map();
-        self.log_fmt(server.log_channel, server.config.server_member_remove_msg.as_ref(), &map)?;
+        let template = server.config.as_ref().and_then(|c| c.server_member_remove_msg.as_ref());
+        self.log_fmt(server.log_channel, template, &map)?;
         Ok(())
     }
 }

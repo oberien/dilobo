@@ -25,18 +25,21 @@ impl Bot {
             match diff {
                 EmojisUpdateDiff::EmojiAdded(emoji) => {
                     let map = emoji.into_map_prefix("emoji_");
-                    self.log_fmt(server.log_channel, server.config.server_emoji_add_msg.as_ref(), &map)?;
+                    let template = server.config.as_ref().and_then(|c| c.server_emoji_add_msg.as_ref());
+                    self.log_fmt(server.log_channel, template, &map)?;
                 },
                 EmojisUpdateDiff::EmojiRemoved(emoji) => {
                     let map = emoji.into_map_prefix("emoji_");
-                    self.log_fmt(server.log_channel, server.config.server_emoji_remove_msg.as_ref(), &map)?;
+                    let template = server.config.as_ref().and_then(|c| c.server_emoji_remove_msg.as_ref());
+                    self.log_fmt(server.log_channel, template, &map)?;
                 },
                 EmojisUpdateDiff::NameChanged(id, from, to) => {
                     let mut map = HashMap::new();
                     map.insert("emoji_id".to_string(), id.to_string());
                     map.insert("from".to_string(), from);
                     map.insert("to".to_string(), to);
-                    self.log_fmt(server.log_channel, server.config.server_emoji_name_change_msg.as_ref(), &map)?;
+                    let template = server.config.as_ref().and_then(|c| c.server_emoji_name_change_msg.as_ref());
+                    self.log_fmt(server.log_channel, template, &map)?;
                 }
             }
         }

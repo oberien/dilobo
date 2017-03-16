@@ -42,13 +42,13 @@ pub struct Server {
     // splash
     // default_message_notifications
     // mfa_level
-    pub log_channel: ChannelId,
     pub messages: ExpiringMap<MessageId, Message>,
-    pub config: ServerConfig,
+    pub config: Option<ServerConfig>,
+    pub log_channel: Option<ChannelId>,
 }
 
 impl Server {
-    pub fn new(config: ServerConfig, mut server: LiveServer, log_channel: ChannelId) -> Server {
+    pub fn new(mut server: LiveServer, config: Option<ServerConfig>, log_channel: Option<ChannelId>) -> Server {
         Server {
             id: server.id,
             name: server.name,
@@ -62,9 +62,9 @@ impl Server {
             afk_channel_id: server.afk_channel_id,
             verification_level: server.verification_level,
             emojis: server.emojis.drain(..).map(|emoji| (emoji.id, emoji)).collect(),
-            log_channel: log_channel,
             messages: ExpiringMap::new(Duration::from_secs(300)),
             config: config,
+            log_channel: log_channel,
         }
     }
 }

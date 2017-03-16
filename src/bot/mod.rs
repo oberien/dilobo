@@ -52,6 +52,11 @@ impl Bot {
     }
 
     fn add_server(&mut self, server: LiveServer) {
+        // regardless of if the server is configured or not, we need to have its full state
+        // so we can keep it updated in case it is dynamically configured later
+        for channel in server.channels.iter() {
+            self.channels.insert(channel.id, server.id);
+        }
         // check if server is configured
         let index = self.config.server.iter().position(|s| {
             match s.server_id {
@@ -67,14 +72,16 @@ impl Bot {
         });
         // not in server config
         if let None = index {
-            println!("The bot is member of unconfigured server: {:?}", server);
+            println!("The bot is member of unconfigured server: {:?}", server.name);
+            let server = Server::new(server, None, None);
+            self.servers.insert(server.id, server);
             return;
         }
         let server_config = self.config.server.swap_remove(index.unwrap());
         let mut log_channel = None;
+        let mut channel_missing = false;
 
         for channel in server.channels.iter() {
-            self.channels.insert(channel.id, server.id);
             // check if this channel is the log channel
             let is_log_channel = match server_config.log_channel_id {
                 Some(id) => match server_config.log_channel_name {
@@ -83,19 +90,29 @@ impl Bot {
                 },
                 None => match server_config.log_channel_name {
                     Some(ref name) => channel.name == *name,
-                    None => panic!("No log_channel_id or log_channel_name given to identify the channel.")
+                    None => {
+                        channel_missing = true;
+                        break;
+                    }
                 }
             };
             if is_log_channel {
                 log_channel = Some(channel.id);
+                break;
             }
         }
-        if log_channel == None {
-            panic!("Couldn't find log channel for server.");
+        if channel_missing {
+            println!("No log_channel_id or log_channel_name given to identify the channel.");
+            let server = Server::new(server, Some(server_config), None);
+            self.servers.insert(server.id, server);
+            return;
         }
-        let log_channel = log_channel.unwrap();
-        let server = Server::new(server_config, server, log_channel);
-        println!("Successfully logging for server {:?}", server.name);
+        let server = Server::new(server, Some(server_config), log_channel);
+        if let None = log_channel {
+            println!("Added Server but couldn't find log channel {:?}", server.name);
+        } else {
+            println!("Successfully logging for server {:?}", server.name);
+        }
         println!();
         self.servers.insert(server.id, server);
 
@@ -132,7 +149,7 @@ impl Bot {
             .expect(&format!("could not find server for server_id {}", server_id))
     }
 
-    fn log_fmt(&self, log_channel: ChannelId, fmt: Option<&String>, map: &HashMap<String, String>) -> Result<()> {
+    fn log_fmt(&self, log_channel: Option<ChannelId>, fmt: Option<&String>, map: &HashMap<String, String>) -> Result<()> {
         if let Some(fmt) = fmt {
             // TODO: user error_chain instead of unwrap
             let msg = strfmt(&fmt, map).unwrap();
@@ -141,7 +158,12 @@ impl Bot {
         Ok(())
     }
 
-    fn log(&self, log_channel: ChannelId, msg: &str) -> Result<()> {
+    fn log(&self, log_channel: Option<ChannelId>, msg: &str) -> Result<()> {
+        if let None = log_channel {
+            // TODO: return proper error with error_chain
+            return Ok(())
+        }
+        let log_channel = log_channel.unwrap();
         self.dis.send_message(log_channel, msg, "", false).map(|_| ())
     }
 }

@@ -13,7 +13,8 @@ impl Bot {
             self.channels.insert(channel.id, channel.server_id);
             let server = self.server_by_channel(channel.id);
             let map = channel.into_map();
-            self.log_fmt(server.log_channel, server.config.channel_create_msg.as_ref(), &map)?;
+            let template = server.config.as_ref().and_then(|c| c.channel_create_msg.as_ref());
+            self.log_fmt(server.log_channel, template, &map)?;
         }
         // TODO: Return error if channel is not public once error_chain is in use
         Ok(())
@@ -37,7 +38,8 @@ impl Bot {
             {
                 let server = self.server_by_channel(channel.id);
                 let map = channel.into_map();
-                self.log_fmt(server.log_channel, server.config.channel_delete_msg.as_ref(), &map)?;
+                let template = server.config.as_ref().and_then(|c| c.channel_delete_msg.as_ref());
+                self.log_fmt(server.log_channel, template, &map)?;
             }
             self.channels.remove(&channel_id);
         }
