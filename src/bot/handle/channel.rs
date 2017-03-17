@@ -8,7 +8,6 @@ use discord::model::{
 
 impl Bot {
     pub fn handle_channel_create(&mut self, channel: Channel) -> Result<()> {
-        // TODO: add channel to cache
         if let Channel::Public(channel) = channel {
             self.channels.insert(channel.id, channel.server_id);
             let server = self.server_by_channel(channel.id);
@@ -32,7 +31,6 @@ impl Bot {
     }
 
     pub fn handle_channel_delete(&mut self, channel: Channel) -> Result<()> {
-        // TODO: remove channel from cache
         if let Channel::Public(channel) = channel {
             let channel_id = channel.id;
             {
