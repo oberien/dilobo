@@ -140,26 +140,25 @@ impl Bot {
 
         use ::std::fmt::Write as FmtWrite;
         use ::std::io::Write as IoWrite;
-        writeln!(&mut errmsg, "error: {}", err).unwrap();
+        // first log for us
+        let stderr = &mut ::std::io::stderr();
+        writeln!(stderr, "error: {:?}", err).expect("failed writing to stderr");
+        for e in err.iter().skip(1) {
+            writeln!(stderr, "caused by: {:?}", e).expect("failed writing to stderr");
+        }
+        if let Some(backtrace) = err.backtrace() {
+            writeln!(stderr, "backtrace: {:?}", backtrace).expect("failed writing to stderr");
+        }
 
+        // then log for all servers
+        writeln!(&mut errmsg, "error: {}", err).unwrap();
         for e in err.iter().skip(1) {
             writeln!(&mut errmsg, "caused by: {}", e).unwrap();
         }
-
-        // The backtrace is not always generated. Try to run this example
-        // with `RUST_BACKTRACE=1`.
-        let stderr = &mut ::std::io::stderr();
-        writeln!(stderr, "Uncaught error: {}", errmsg)
-            .expect("failed writing to stderr");
-        if let Some(backtrace) = err.backtrace() {
-            writeln!(stderr, "backtrace: {:?}", backtrace)
-                .expect("failed writing to stderr");
-        }
-
         for server in self.servers.values() {
             // ignore errors, we are restarting anyways
             let _ = self.log(server.log_channel, &format!("Got uncaught error and need to restart.\
-                    Please report this to oberien#2194 or on github ( \
+                    Please report this on https://discord.gg/5y7NKvj or github ( \
                     https://github.com/oberien/dilobo/issues/new ):\n {}", errmsg));
         }
         return false;
