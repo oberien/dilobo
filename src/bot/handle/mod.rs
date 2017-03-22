@@ -9,8 +9,9 @@ mod reaction;
 
 use bot::Bot;
 
-use discord::Result;
 use discord::model::{Event, PossibleServer};
+
+use errors::*;
 
 impl Bot {
     pub fn handle_event(&mut self, evt: Event) -> Result<()> {
@@ -48,7 +49,7 @@ impl Bot {
             },
             Event::ServerCreate(server) => {
                 match server {
-                    PossibleServer::Online(server) => self.add_server(server),
+                    PossibleServer::Online(server) => self.add_server(server)?,
                     _ => {}
                 }
             },

@@ -14,11 +14,13 @@ use discord::model::{
 };
 use serde_json::Value;
 
+use errors::*;
+
 pub trait Diff {
     type Other;
     type Output;
 
-    fn diff(&self, other: &Self::Other) -> Vec<Self::Output>;
+    fn diff(&self, other: &Self::Other) -> Result<Vec<Self::Output>>;
 }
 
 pub enum MessageUpdateDiff {
@@ -41,7 +43,7 @@ pub enum MessageUpdateDiff {
 }
 
 impl MessageUpdateDiff {
-    pub fn apply(&self, message: &mut Message) {
+    pub fn apply(&self, message: &mut Message) -> Result<()> {
         match self {
             &MessageUpdateDiff::Kind(_, new) => message.kind = new,
             &MessageUpdateDiff::Content(_, ref new) => message.content = new.clone(),
@@ -53,29 +55,26 @@ impl MessageUpdateDiff {
             &MessageUpdateDiff::MentionEveryone(_, new) => message.mention_everyone = new,
             &MessageUpdateDiff::MentionAdded(ref user) => message.mentions.push(user.clone()),
             &MessageUpdateDiff::MentionRemoved(ref user) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                let pos = message.mentions.iter().position(|u| u.id == user.id).unwrap();
+                let pos = unwrap!(message.mentions.iter().position(|u| u.id == user.id));
                 message.mentions.swap_remove(pos);
             },
             &MessageUpdateDiff::MentionRoleAdded(role_id) => message.mention_roles.push(role_id),
             &MessageUpdateDiff::MentionRoleRemoved(role_id) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                let pos = message.mention_roles.iter().position(|id| *id == role_id).unwrap();
+                let pos = unwrap!(message.mention_roles.iter().position(|id| *id == role_id));
                 message.mention_roles.swap_remove(pos);
             },
             &MessageUpdateDiff::AttachmentAdded(ref attachment) => message.attachments.push(attachment.clone()),
             &MessageUpdateDiff::AttachmentRemoved(ref attachment) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                let pos = message.attachments.iter().position(|a| a.id == attachment.id).unwrap();
+                let pos = unwrap!(message.attachments.iter().position(|a| a.id == attachment.id));
                 message.attachments.swap_remove(pos);
             },
             &MessageUpdateDiff::EmbedsAdded(ref val) => message.embeds.push(val.clone()),
             &MessageUpdateDiff::EmbedsRemoved(ref val) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                let pos = message.embeds.iter().position(|v| v == val).unwrap();
+                let pos = unwrap!(message.embeds.iter().position(|v| v == val));
                 message.embeds.swap_remove(pos);
             },
         }
+        Ok(())
     }
 }
 
@@ -83,7 +82,7 @@ impl Diff for Message {
     type Other = MessageUpdate;
     type Output = MessageUpdateDiff;
 
-    fn diff(&self, other: &MessageUpdate) -> Vec<Self::Output> {
+    fn diff(&self, other: &MessageUpdate) -> Result<Vec<Self::Output>> {
         let mut res = Vec::new();
         if let Some(kind) = other.kind {
             if kind != self.kind {
@@ -160,7 +159,7 @@ impl Diff for Message {
                 res.push(MessageUpdateDiff::EmbedsRemoved(removed.clone()));
             }
         }
-        res
+        Ok(res)
     }
 }
 
@@ -171,16 +170,16 @@ pub enum MemberUpdateDiff {
 }
 
 impl MemberUpdateDiff {
-    pub fn apply(&self, member: &mut Member) {
+    pub fn apply(&self, member: &mut Member) -> Result<()> {
         match self {
             &MemberUpdateDiff::RoleAdded(id) => member.roles.push(id),
             &MemberUpdateDiff::RoleRemoved(id) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                let pos = member.roles.iter().position(|rid| *rid == id).unwrap();
+                let pos = unwrap!(member.roles.iter().position(|rid| *rid == id));
                 member.roles.swap_remove(pos);
             },
             &MemberUpdateDiff::NickChanged(_, ref to) => member.nick = to.clone(),
         }
+        Ok(())
     }
 }
 
@@ -188,7 +187,7 @@ impl Diff for Member {
     type Other = ServerMemberUpdate;
     type Output = MemberUpdateDiff;
 
-    fn diff(&self, other: &Self::Other) -> Vec<Self::Output> {
+    fn diff(&self, other: &Self::Other) -> Result<Vec<Self::Output>> {
         let mut res = Vec::new();
         let selfroles: HashSet<_> = self.roles.iter().cloned().collect();
         let otherroles: HashSet<_> = other.roles.iter().cloned().collect();
@@ -201,7 +200,7 @@ impl Diff for Member {
         if self.nick != other.nick {
             res.push(MemberUpdateDiff::NickChanged(self.nick.clone(), other.nick.clone()));
         }
-        res
+        Ok(res)
     }
 }
 
@@ -212,21 +211,19 @@ pub enum EmojisUpdateDiff {
 }
 
 impl EmojisUpdateDiff {
-    pub fn apply(&self, emojis: &mut HashMap<EmojiId, Emoji>) {
+    pub fn apply(&self, emojis: &mut HashMap<EmojiId, Emoji>) -> Result<()> {
         match self {
             &EmojisUpdateDiff::EmojiAdded(ref emoji) => {
-                // TODO: don't panic but return Result once error_chain is in place
                 assert!(emojis.insert(emoji.id, emoji.clone()).is_none());
             },
             &EmojisUpdateDiff::EmojiRemoved(ref emoji) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                emojis.remove(&emoji.id).unwrap();
+                unwrap!(emojis.remove(&emoji.id));
             },
             &EmojisUpdateDiff::NameChanged(id, _, ref new) => {
-                // TODO: don't unwrap but return Result once error_chain is in place
-                emojis.get_mut(&id).unwrap().name = new.clone();
+                unwrap!(emojis.get_mut(&id)).name = new.clone();
             },
         }
+        Ok(())
     }
 }
 
@@ -234,7 +231,7 @@ impl Diff for HashMap<EmojiId, Emoji> {
     type Other = Vec<Emoji>;
     type Output = EmojisUpdateDiff;
 
-    fn diff(&self, others: &Self::Other) -> Vec<Self::Output> {
+    fn diff(&self, others: &Self::Other) -> Result<Vec<Self::Output>> {
         let mut res = Vec::new();
         for other in others {
             let old = self.get(&other.id);
@@ -250,10 +247,9 @@ impl Diff for HashMap<EmojiId, Emoji> {
         let selfids: HashSet<_> = self.keys().cloned().collect();
         let otherids: HashSet<_> = others.iter().map(|e| e.id).collect();
         for removed_id in selfids.difference(&otherids) {
-            // TODO: don't unwrap but return Result once error_chain is in place
-            let removed = self.get(removed_id).unwrap();
+            let removed = unwrap!(self.get(removed_id));
             res.push(EmojisUpdateDiff::EmojiRemoved(removed.clone()));
         }
-        res
+        Ok(res)
     }
 }

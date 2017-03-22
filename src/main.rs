@@ -1,37 +1,44 @@
-extern crate toml;
+// `error_chain!` can recurse deeply
+#![recursion_limit = "1024"]extern crate toml;
+
 extern crate rustc_serialize;
 extern crate discord;
 extern crate strfmt;
 extern crate serde_json;
+#[macro_use]
+extern crate error_chain;
 
+#[macro_use]
+mod errors;
 mod expiring_map;
 mod modelext;
 mod config;
 mod bot;
 
-use std::io::{self, Write};
+use std::time::{Instant, Duration};
 
-use config::{Config, BotConfig};
+use config::Config;
 use bot::Bot;
 
 fn main() {
     println!("Reading config...");
     let mut config = Config::load("Config.toml");
     println!("Config read successfully");
-    if let None = config.bot {
-        print!("Please insert the bot token: ");
-        io::stdout().flush().expect("could not flush stdout");
-        let stdin = io::stdin();
-        let mut token = String::new();
-        stdin.read_line(&mut token).expect("could not read from stdin");
-        let token = token.trim().to_string();
-        config.bot = Some(BotConfig { token: token });
-        config.save("Config.toml");
-    }
+    config.validate().unwrap();
+
+    let mintime = Duration::from_secs(5);
+    let mut fastexits = 0;
     loop {
-        let mut bot = Bot::new(config.clone());
-        if let Err(err) = bot.run() {
-            println!("Error during bot.run: {:?}", err);
+        let time = Instant::now();
+        let mut bot = Bot::new(config.clone()).unwrap();
+        bot.run();
+        if time + mintime < Instant::now() {
+            fastexits += 1;
+        } else {
+            fastexits = 0;
+        }
+        if fastexits > 3 {
+            panic!("FUCK THIS SHIT I'M OUT");
         }
     }
 }

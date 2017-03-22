@@ -1,9 +1,11 @@
 use std::path::Path;
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 
 use toml::{self, Parser, Decoder, Value};
 use rustc_serialize::Decodable;
+
+use errors::*;
 
 #[derive(Debug, RustcDecodable, RustcEncodable, Clone)]
 pub struct Config {
@@ -127,5 +129,24 @@ impl Config {
             let mut file = OpenOptions::new().create(true).write(true)
                 .truncate(true).open(path).expect("Failed to open config file");
             write!(file, "{}", contents).expect("Failed to write config file");
+    }
+
+    pub fn validate(&mut self) -> Result<()> {
+        if let None = self.bot {
+            print!("Please insert the bot token: ");
+            io::stdout().flush().expect("could not flush stdout");
+            let stdin = io::stdin();
+            let mut token = String::new();
+            stdin.read_line(&mut token).expect("could not read from stdin");
+            let token = token.trim().to_string();
+            self.bot = Some(BotConfig { token: token });
+            self.save("Config.toml");
+        }
+        for server in self.server.iter() {
+            if server.server_name.is_none() && server.server_id.is_none() {
+                return Err(ErrorKind::ConfigError("No server_id or server_name given".to_string()).into())
+            }
+        }
+        Ok(())
     }
 }

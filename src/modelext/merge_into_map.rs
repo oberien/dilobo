@@ -18,29 +18,32 @@ use discord::model::{
 use discord::model::permissions::{self, Permissions};
 use modelext::diff::MessageUpdateDiff;
 
+use errors::*;
+
 pub trait MergeIntoMap {
-    fn merge_into_map(self, map: &mut HashMap<String, String>);
-    fn merge_into_map_prefix(self, map: &mut HashMap<String, String>, prefix: &str)
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()>;
+    fn merge_into_map_prefix(self, map: &mut HashMap<String, String>, prefix: &str) -> Result<()>
             where Self: ::std::marker::Sized {
-        let mut new_map = self.into_map();
+        let mut new_map = self.into_map()?;
         for (k, v) in new_map.drain() {
             map.insert(prefix.to_string() + &k, v);
         }
+        Ok(())
     }
-    fn into_map(self) -> HashMap<String, String> where Self: ::std::marker::Sized {
+    fn into_map(self) -> Result<HashMap<String, String>> where Self: ::std::marker::Sized {
         let mut map = HashMap::new();
-        self.merge_into_map(&mut map);
-        map
+        self.merge_into_map(&mut map)?;
+        Ok(map)
     }
-    fn into_map_prefix(self, prefix: &str) -> HashMap<String, String> where Self: ::std::marker::Sized {
+    fn into_map_prefix(self, prefix: &str) -> Result<HashMap<String, String>> where Self: ::std::marker::Sized {
         let mut map = HashMap::new();
-        self.merge_into_map_prefix(&mut map, prefix);
-        map
+        self.merge_into_map_prefix(&mut map, prefix)?;
+        Ok(map)
     }
 }
 
 impl MergeIntoMap for User {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let User { id, name, discriminator, avatar, bot } = self;
         map.insert("id".to_string(), id.to_string());
         map.insert("name".to_string(), name);
@@ -53,11 +56,12 @@ impl MergeIntoMap for User {
             map.insert("type".to_string(), "member".to_string());
             map.insert("Type".to_string(), "Member".to_string());
         }
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Member {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let Member { user, roles, nick, joined_at: time, mute, deaf } = self;
         // TODO: find better solution to provide lists
         map.insert("roles".to_string(), format!("{:?}", roles));
@@ -66,12 +70,13 @@ impl MergeIntoMap for Member {
         // TODO: find better way to format mute and deaf
         map.insert("mute".to_string(), mute.to_string());
         map.insert("deaf".to_string(), deaf.to_string());
-        user.merge_into_map(map);
+        user.merge_into_map(map)?;
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Message {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let Message { id, channel_id, content, nonce, tts, timestamp: time,
             edited_timestamp: edited_time, pinned, kind, author,
             mention_everyone, mentions, mention_roles, reactions, attachments,
@@ -90,7 +95,7 @@ impl MergeIntoMap for Message {
         map.insert("time".to_string(), time.to_string());
         map.insert("edited_time".to_string(), edited_time.unwrap_or("None".to_string()));
         map.insert("pinned".to_string(), pinned.to_string());
-        author.merge_into_map_prefix(map, "author_");
+        author.merge_into_map_prefix(map, "author_")?;
         map.insert("mention_everyone".to_string(), mention_everyone.to_string());
         // TODO: find better solution to provide lists
         map.insert("mentions".to_string(), format!("{:?}", mentions));
@@ -102,19 +107,21 @@ impl MergeIntoMap for Message {
         map.insert("attachments".to_string(), format!("{:?}", attachments));
         // TODO: find better solution to provide lists
         map.insert("embeds".to_string(), format!("{:?}", embeds));
+        Ok(())
     }
 }
 
 impl MergeIntoMap for MessageDelete {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let MessageDelete { channel_id, message_id } = self;
         map.insert("channel_id".to_string(), channel_id.to_string());
         map.insert("message_id".to_string(), message_id.to_string());
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Role {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let Role { id, name, color, hoist, managed, position,
                    mentionable, permissions: perms } = self;
         map.insert("id".to_string(), id.to_string());
@@ -125,12 +132,13 @@ impl MergeIntoMap for Role {
         map.insert("position".to_string(), position.to_string());
         map.insert("mentionable".to_string(), mentionable.to_string());
         map.insert("perms".to_string(), format!("{:?}", perms));
-        perms.merge_into_map_prefix(map, "perm_");
+        perms.merge_into_map_prefix(map, "perm_")?;
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Permissions {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         map.insert("add_reactions".to_string(), self.contains(permissions::ADD_REACTIONS).to_string());
         map.insert("administrator".to_string(), self.contains(permissions::ADMINISTRATOR).to_string());
         map.insert("attach_files".to_string(), self.contains(permissions::ATTACH_FILES).to_string());
@@ -158,11 +166,12 @@ impl MergeIntoMap for Permissions {
         map.insert("voice_mute_members".to_string(), self.contains(permissions::VOICE_MUTE_MEMBERS).to_string());
         map.insert("voice_speak".to_string(), self.contains(permissions::VOICE_SPEAK).to_string());
         map.insert("voice_use_vad".to_string(), self.contains(permissions::VOICE_USE_VAD).to_string());
+        Ok(())
     }
 }
 
 impl MergeIntoMap for PublicChannel {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let PublicChannel { id, name, server_id: _, kind, permission_overwrites,
                 topic, position, last_message_id, bitrate, user_limit,
                 last_pin_timestamp: last_pin_time } = self;
@@ -178,21 +187,23 @@ impl MergeIntoMap for PublicChannel {
         map.insert("bitrate".to_string(), bitrate.map(|b| b.to_string()).unwrap_or("None".to_string()));
         map.insert("user_limit".to_string(), user_limit.map(|limit| limit.to_string()).unwrap_or("None".to_string()));
         map.insert("last_pin_time".to_string(), last_pin_time.unwrap_or("None".to_string()));
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Reaction {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let Reaction { channel_id, message_id, user_id, emoji } = self;
         map.insert("channel_id".to_string(), channel_id.to_string());
         map.insert("message_id".to_string(), message_id.to_string());
         map.insert("user_id".to_string(), user_id.to_string());
-        emoji.merge_into_map_prefix(map, "emoji_");
+        emoji.merge_into_map_prefix(map, "emoji_")?;
+        Ok(())
     }
 }
 
 impl MergeIntoMap for ReactionEmoji {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         match self {
             ReactionEmoji::Unicode(name) => {
                 map.insert("name".to_string(), name);
@@ -203,22 +214,24 @@ impl MergeIntoMap for ReactionEmoji {
                 map.insert("id".to_string(), id.to_string());
             }
         }
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Emoji {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         map.insert("id".to_string(), self.id.to_string());
         map.insert("name".to_string(), self.name);
         map.insert("managed".to_string(), self.managed.to_string());
         map.insert("require_colons".to_string(), self.require_colons.to_string());
         // TODO: find better solution to provide lists
         map.insert("roles".to_string(), format!("{:?}", self.roles));
+        Ok(())
     }
 }
 
 impl MergeIntoMap for MessageUpdate {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         map.insert("debug".to_string(), format!("{:?}", self));
         let MessageUpdate { id, channel_id, kind, content, nonce, tts, pinned,
                 timestamp: time, edited_timestamp: edited_time, author,
@@ -234,9 +247,9 @@ impl MergeIntoMap for MessageUpdate {
         map.insert("time".to_string(), time.unwrap_or("None".to_string()));
         map.insert("edited_time".to_string(), edited_time.unwrap_or("None".to_string()));
         if let Some(author) = author {
-            author.merge_into_map_prefix(map, "author_");
+            author.merge_into_map_prefix(map, "author_")?;
         } else {
-            User { id: UserId(0), name: "None".to_string(), discriminator: 0, avatar: None, bot: false }.merge_into_map_prefix(map, "author_");
+            User { id: UserId(0), name: "None".to_string(), discriminator: 0, avatar: None, bot: false }.merge_into_map_prefix(map, "author_")?;
         }
         map.insert("mention_everyone".to_string(), mention_everyone.map(|t| t.to_string()).unwrap_or("None".to_string()));
         // TODO: find better solution to provide lists
@@ -247,11 +260,12 @@ impl MergeIntoMap for MessageUpdate {
         map.insert("attachments".to_string(), attachments.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
         // TODO: find better solution to provide lists
         map.insert("embeds".to_string(), embeds.map(|t| format!("{:?}", t)).unwrap_or("None".to_string()));
+        Ok(())
     }
 }
 
 impl MergeIntoMap for Attachment {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         let Attachment { id, filename, url, proxy_url, size, dimensions } = self;
         map.insert("id".to_string(), id);
         map.insert("filename".to_string(), filename);
@@ -262,11 +276,12 @@ impl MergeIntoMap for Attachment {
             .unwrap_or(("None".to_string(), "None".to_string()));
         map.insert("width".to_string(), width);
         map.insert("height".to_string(), height);
+        Ok(())
     }
 }
 
 impl MergeIntoMap for MessageUpdateDiff {
-    fn merge_into_map(self, map: &mut HashMap<String, String>) {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
         match self {
             MessageUpdateDiff::Kind(from, to) => {
                 map.insert("from".to_string(), format!("{:?}", from));
@@ -295,10 +310,10 @@ impl MergeIntoMap for MessageUpdateDiff {
                 map.insert("to".to_string(), to.to_string());
             },
             MessageUpdateDiff::MentionAdded(user) => {
-                user.merge_into_map(map);
+                user.merge_into_map(map)?;
             },
             MessageUpdateDiff::MentionRemoved(user) => {
-                user.merge_into_map(map);
+                user.merge_into_map(map)?;
             },
             MessageUpdateDiff::MentionRoleAdded(role_id) => {
                 map.insert("id".to_string(), role_id.to_string());
@@ -307,10 +322,10 @@ impl MergeIntoMap for MessageUpdateDiff {
                 map.insert("id".to_string(), role_id.to_string());
             },
             MessageUpdateDiff::AttachmentAdded(attachment) => {
-                attachment.merge_into_map(map);
+                attachment.merge_into_map(map)?;
             },
             MessageUpdateDiff::AttachmentRemoved(attachment) => {
-                attachment.merge_into_map(map);
+                attachment.merge_into_map(map)?;
             },
             MessageUpdateDiff::EmbedsAdded(value) => {
                 map.insert("value".to_string(), value.to_string());
@@ -319,5 +334,6 @@ impl MergeIntoMap for MessageUpdateDiff {
                 map.insert("value".to_string(), value.to_string());
             },
         }
+        Ok(())
     }
 }

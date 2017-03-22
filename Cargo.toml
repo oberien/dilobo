@@ -9,3 +9,4 @@ rustc-serialize = "0.3.22"
 discord = { git = "https://github.com/oberien/discord-rs" }
 strfmt = "0.1.5"
 serde_json = "0.8.6"
+error-chain = "0.10.0"
