@@ -12,6 +12,7 @@ server_name = "My Awesome Server"
 # log_channel_id. If both are given, they'll be checked against each other.
 log_channel_name = "log"
 # log_channel_id = 42
+verbose = false
 
 # Messages
 message_create_msg = "New message from <@{author_id}> ({author_name}#{author_discriminator}) in <#{channel_id}> at {time}: \"{content}\""

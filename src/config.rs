@@ -24,6 +24,7 @@ pub struct ServerConfig {
     pub server_name: Option<String>,
     pub log_channel_id: Option<u64>,
     pub log_channel_name: Option<String>,
+    pub verbose: Option<bool>,
     // Format strings for events
     //pub ready_msg: Option<String>,
     //pub resumed_msg: Option<String>,

@@ -156,10 +156,21 @@ impl Bot {
             writeln!(&mut errmsg, "caused by: {}", e).unwrap();
         }
         for server in self.servers.values() {
-            // ignore errors, we are restarting anyways
-            let _ = self.log(server.log_channel, &format!("Got uncaught error and need to restart.\
+            if server.log_channel.is_none() || server.config.is_none() {
+                continue;
+            }
+            let log_channel = server.log_channel.unwrap();
+            let config = server.config.as_ref().unwrap();
+            if config.verbose.unwrap_or(false) {
+                // ignore errors, we are restarting anyways
+                let _ = self.log(Some(log_channel), &format!(
+                    "Got uncaught error and need to restart. \
                     Please report this on https://discord.gg/5y7NKvj or github ( \
-                    https://github.com/oberien/dilobo/issues/new ):\n {}", errmsg));
+                    https://github.com/oberien/dilobo/issues/new ):\n{}", errmsg));
+            } else {
+                // ignore errors, we are restarting anyways
+                let _ = self.log(Some(log_channel), "Got error and need to restart.");
+            }
         }
         return false;
     }
