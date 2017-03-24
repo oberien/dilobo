@@ -1,16 +1,37 @@
 use std::collections::{HashSet, HashMap};
+use std::ops::{Deref, DerefMut};
 
 use discord::model::{
     Message,
     MessageUpdate,
     MessageType,
     User,
+    UserId,
     RoleId,
     Attachment,
     Member,
     ServerMemberUpdate,
     EmojiId,
     Emoji,
+    PublicChannel,
+    PermissionOverwriteType,
+    Permissions,
+};
+use discord::model::permissions::{
+    CREATE_INVITE,
+    MANAGE_CHANNELS,
+    MANAGE_ROLES,
+    MANAGE_WEBHOOKS,
+    READ_MESSAGES,
+    SEND_MESSAGES,
+    SEND_TTS_MESSAGES,
+    MANAGE_MESSAGES,
+    EMBED_LINKS,
+    ATTACH_FILES,
+    READ_HISTORY,
+    MENTION_EVERYONE,
+    EXTERNAL_EMOJIS,
+    ADD_REACTIONS,
 };
 use serde_json::Value;
 
@@ -249,6 +270,215 @@ impl Diff for HashMap<EmojiId, Emoji> {
         for removed_id in selfids.difference(&otherids) {
             let removed = unwrap!(self.get(removed_id));
             res.push(EmojisUpdateDiff::EmojiRemoved(removed.clone()));
+        }
+        Ok(res)
+    }
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum PermissionType {
+    Allow,
+    Default,
+    Deny,
+}
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub enum ChannelPermission {
+    CreateInvite,
+    ManageChannel,
+    ManagePermissions,
+    ManageWebhooks,
+    ReadMessages,
+    SendMessages,
+    SendTtsMessages,
+    ManageMessages,
+    EmbedLinks,
+    AttachFiles,
+    ReadMessageHistory,
+    MentionEveryone,
+    UseExternealEmojis,
+    AddReactions,
+}
+
+pub struct MyVec<T>(Vec<T>);
+impl<T> From<Vec<T>> for MyVec<T> {
+    fn from(other: Vec<T>) -> Self {
+        MyVec(other)
+    }
+}
+impl<T> Deref for MyVec<T> {
+    type Target = Vec<T>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<T> DerefMut for MyVec<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<Permissions> for MyVec<ChannelPermission> {
+    fn from(perm: Permissions) -> MyVec<ChannelPermission> {
+        let mut res = Vec::new();
+        if perm.contains(CREATE_INVITE) { res.push(ChannelPermission::CreateInvite); }
+        if perm.contains(MANAGE_CHANNELS) { res.push(ChannelPermission::ManageChannel); }
+        if perm.contains(MANAGE_ROLES) { res.push(ChannelPermission::ManagePermissions); }
+        if perm.contains(MANAGE_WEBHOOKS) { res.push(ChannelPermission::ManageWebhooks); }
+        if perm.contains(READ_MESSAGES) { res.push(ChannelPermission::ReadMessages); }
+        if perm.contains(SEND_MESSAGES) { res.push(ChannelPermission::SendMessages); }
+        if perm.contains(SEND_TTS_MESSAGES) { res.push(ChannelPermission::SendTtsMessages); }
+        if perm.contains(MANAGE_MESSAGES) { res.push(ChannelPermission::ManageMessages); }
+        if perm.contains(EMBED_LINKS) { res.push(ChannelPermission::EmbedLinks); }
+        if perm.contains(ATTACH_FILES) { res.push(ChannelPermission::AttachFiles); }
+        if perm.contains(READ_HISTORY) { res.push(ChannelPermission::ReadMessageHistory); }
+        if perm.contains(MENTION_EVERYONE) { res.push(ChannelPermission::MentionEveryone); }
+        if perm.contains(EXTERNAL_EMOJIS) { res.push(ChannelPermission::UseExternealEmojis); }
+        if perm.contains(ADD_REACTIONS) { res.push(ChannelPermission::AddReactions); }
+        res.into()
+    }
+}
+
+pub enum ChannelUpdateDiff {
+    Name(String, String),
+    UserPermission(UserId, ChannelPermission, Option<PermissionType>, Option<PermissionType>),
+    RolePermission(RoleId, ChannelPermission, Option<PermissionType>, Option<PermissionType>),
+    Topic(Option<String>, Option<String>),
+    Position(i64, i64),
+    Bitrate(Option<u64>, Option<u64>),
+    UserLimit(Option<u64>, Option<u64>),
+}
+
+impl Diff for PublicChannel {
+    type Other = PublicChannel;
+    type Output = ChannelUpdateDiff;
+
+    fn diff(&self, other: &Self::Other) -> Result<Vec<Self::Output>> {
+        let mut res = Vec::new();
+        if self.name != other.name {
+            res.push(ChannelUpdateDiff::Name(self.name.clone(), other.name.clone()));
+        }
+        if self.topic != other.topic {
+            res.push(ChannelUpdateDiff::Topic(self.topic.clone(), other.topic.clone()));
+        }
+        if self.position != other.position {
+            res.push(ChannelUpdateDiff::Position(self.position, other.position));
+        }
+        if self.bitrate != other.bitrate {
+            res.push(ChannelUpdateDiff::Bitrate(self.bitrate, other.bitrate));
+        }
+        if self.user_limit != other.user_limit {
+            res.push(ChannelUpdateDiff::UserLimit(self.user_limit, other.user_limit));
+        }
+        if self.permission_overwrites != other.permission_overwrites {
+            let mut own: HashMap<_,_> = self.permission_overwrites.iter().map(|perm| (perm.kind, perm)).collect();
+            for other in other.permission_overwrites.iter() {
+                let own = own.remove(&other.kind);
+                if let None = own {
+                    let tmp: MyVec<_> = other.allow.into();
+                    for &allow in tmp.iter() {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, allow, None, Some(PermissionType::Allow))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, allow, None, Some(PermissionType::Allow))),
+                        }
+                    }
+                    let tmp: MyVec<_> = other.deny.into();
+                    for &deny in tmp.iter() {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, deny, None, Some(PermissionType::Deny))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, deny, None, Some(PermissionType::Deny))),
+                        }
+                    }
+                    continue;
+                }
+                let own = own.unwrap();
+                let tmp: MyVec<_> = own.allow.clone().into();
+                let own_allow: HashSet<_> = tmp.iter().collect();
+                let tmp: MyVec<_> = own.deny.clone().into();
+                let own_deny: HashSet<_> = tmp.iter().collect();
+                let tmp: MyVec<_> = other.allow.clone().into();
+                let other_allow: HashSet<_> = tmp.iter().collect();
+                let tmp: MyVec<_> = other.deny.clone().into();
+                let other_deny: HashSet<_> = tmp.iter().collect();
+                for &&removed in own_allow.difference(&other_allow) {
+                    if other_deny.contains(&removed) {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, removed, Some(PermissionType::Allow), Some(PermissionType::Deny))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, removed, Some(PermissionType::Allow), Some(PermissionType::Deny))),
+                        }
+                    } else {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, removed, Some(PermissionType::Allow), Some(PermissionType::Default))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, removed, Some(PermissionType::Allow), Some(PermissionType::Default))),
+                        }
+                    }
+                }
+                for &&added in own_deny.difference(&other_deny) {
+                    if other_allow.contains(&added) {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, added, Some(PermissionType::Deny), Some(PermissionType::Allow))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, added, Some(PermissionType::Deny), Some(PermissionType::Allow))),
+                        }
+                    } else {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, added, Some(PermissionType::Deny), Some(PermissionType::Default))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, added, Some(PermissionType::Deny), Some(PermissionType::Default))),
+                        }
+                    }
+                }
+                for &&allow in other_allow.difference(&own_allow) {
+                    if !own_deny.contains(&allow) {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, allow, Some(PermissionType::Default), Some(PermissionType::Allow))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, allow, Some(PermissionType::Default), Some(PermissionType::Allow))),
+                        }
+                    }
+                }
+                for &&deny in other_deny.difference(&own_deny) {
+                    if !own_allow.contains(&deny) {
+                        match other.kind {
+                            PermissionOverwriteType::Member(id) =>
+                                res.push(ChannelUpdateDiff::UserPermission(id, deny, Some(PermissionType::Default), Some(PermissionType::Deny))),
+                            PermissionOverwriteType::Role(id) =>
+                                res.push(ChannelUpdateDiff::RolePermission(id, deny, Some(PermissionType::Default), Some(PermissionType::Deny))),
+                        }
+                    }
+                }
+            }
+            for perm in own.values() {
+                let tmp: MyVec<_> = perm.allow.into();
+                for &allow in tmp.iter() {
+                    match perm.kind {
+                        PermissionOverwriteType::Member(id) =>
+                            res.push(ChannelUpdateDiff::UserPermission(id, allow, Some(PermissionType::Allow), None)),
+                        PermissionOverwriteType::Role(id) =>
+                            res.push(ChannelUpdateDiff::RolePermission(id, allow, Some(PermissionType::Allow), None)),
+                    }
+                }
+                let tmp: MyVec<_> = perm.deny.into();
+                for &deny in tmp.iter() {
+                    match perm.kind {
+                        PermissionOverwriteType::Member(id) =>
+                            res.push(ChannelUpdateDiff::UserPermission(id, deny, Some(PermissionType::Deny), None)),
+                        PermissionOverwriteType::Role(id) =>
+                            res.push(ChannelUpdateDiff::RolePermission(id, deny, Some(PermissionType::Deny), None)),
+                    }
+                }
+            }
         }
         Ok(res)
     }

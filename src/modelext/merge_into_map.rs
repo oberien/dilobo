@@ -16,7 +16,7 @@ use discord::model::{
     Attachment
 };
 use discord::model::permissions::{self, Permissions};
-use modelext::diff::MessageUpdateDiff;
+use modelext::diff::{MessageUpdateDiff, ChannelUpdateDiff};
 
 use errors::*;
 
@@ -332,6 +332,46 @@ impl MergeIntoMap for MessageUpdateDiff {
             },
             MessageUpdateDiff::EmbedsRemoved(value) => {
                 map.insert("value".to_string(), value.to_string());
+            },
+        }
+        Ok(())
+    }
+}
+
+impl MergeIntoMap for ChannelUpdateDiff {
+    fn merge_into_map(self, map: &mut HashMap<String, String>) -> Result<()> {
+        match self {
+            ChannelUpdateDiff::Name(from, to) => {
+                map.insert("from".to_string(), from);
+                map.insert("to".to_string(), to);
+            },
+            ChannelUpdateDiff::UserPermission(id, perm, from, to) => {
+                map.insert("user_id".to_string(), id.to_string());
+                map.insert("permission".to_string(), format!("{:?}", perm));
+                map.insert("from".to_string(), from.map(|p| format!("{:?}", p)).unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.map(|p| format!("{:?}", p)).unwrap_or("None".to_string()));
+            },
+            ChannelUpdateDiff::RolePermission(id, perm, from, to) => {
+                map.insert("role_id".to_string(), id.to_string());
+                map.insert("permission".to_string(), format!("{:?}", perm));
+                map.insert("from".to_string(), from.map(|p| format!("{:?}", p)).unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.map(|p| format!("{:?}", p)).unwrap_or("None".to_string()));
+            },
+            ChannelUpdateDiff::Topic(from, to) => {
+                map.insert("from".to_string(), from.unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.unwrap_or("None".to_string()));
+            },
+            ChannelUpdateDiff::Position(from, to) => {
+                map.insert("from".to_string(), from.to_string());
+                map.insert("to".to_string(), to.to_string());
+            },
+            ChannelUpdateDiff::Bitrate(from, to) => {
+                map.insert("from".to_string(), from.map(|v| v.to_string()).unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.map(|v| v.to_string()).unwrap_or("None".to_string()));
+            },
+            ChannelUpdateDiff::UserLimit(from, to) => {
+                map.insert("from".to_string(), from.map(|v| v.to_string()).unwrap_or("None".to_string()));
+                map.insert("to".to_string(), to.map(|v| v.to_string()).unwrap_or("None".to_string()));
             },
         }
         Ok(())

@@ -87,8 +87,14 @@ pub struct ServerConfig {
     pub server_emoji_remove_msg: Option<String>,
     pub server_emoji_name_change_msg: Option<String>,
     pub channel_create_msg: Option<String>,
-    // TODO: Differenciate between updates
-    //pub channel_update_msg: Option<String>,
+    pub channel_update_no_change_msg: Option<String>,
+    pub channel_update_name_msg: Option<String>,
+    pub channel_update_user_perms_msg: Option<String>,
+    pub channel_update_role_perms_msg: Option<String>,
+    pub channel_update_topic_msg: Option<String>,
+    pub channel_update_position_msg: Option<String>,
+    pub channel_update_bitrate_msg: Option<String>,
+    pub channel_update_user_limit_msg: Option<String>,
     pub channel_delete_msg: Option<String>,
     //pub channel_pins_ack_msg: Option<String>,
     // TODO: Differenciate between updates
